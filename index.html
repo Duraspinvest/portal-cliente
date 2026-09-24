@@ -158,20 +158,10 @@ main{padding:16px;max-width:600px;margin:0 auto;}
     <input type="file" id="inputImagen" accept="image/*" style="display:none" onchange="procesarArchivo(this)">
     <input type="file" id="inputArchivo" accept="image/*,application/pdf" style="display:none" onchange="procesarArchivo(this)">
 
-    <!-- Preview y progreso -->
+    <!-- Cola de archivos -->
     <div id="previewArea" style="display:none;margin-top:14px;">
-      <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--gray-50);border-radius:9px;margin-bottom:10px;">
-        <div id="previewThumb" style="width:52px;height:52px;border-radius:7px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;">
-          <div id="previewNombre" style="font-size:13px;font-weight:500;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-          <div id="previewTamano" style="font-size:11px;color:var(--gray-400);margin-top:2px;"></div>
-        </div>
-        <button class="btn btn-sm btn-secondary" onclick="cancelarPreview()">✕</button>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descripcion (opcional)</label>
-        <input type="text" class="form-input" id="docDescripcion" placeholder="Ej: Factura Telefonica julio 2026">
-      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Archivos a enviar</div>
+      <div id="colaLista" style="margin-bottom:10px;"></div>
       <div id="progressWrap" style="display:none;" class="progress-wrap">
         <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
         <div class="progress-text" id="progressText">Subiendo...</div>
@@ -358,23 +348,7 @@ function comprimirImagen(file, maxDim, calidad) {
   });
 }
 
-function mostrarPreview(fileOriginal, dataUrl) {
-  const preview = document.getElementById('previewArea');
-  const thumb = document.getElementById('previewThumb');
-  const nombre = document.getElementById('previewNombre');
-  const tamano = document.getElementById('previewTamano');
-  nombre.textContent = fileOriginal.name;
-  const tam = window.archivoActual.size || window.archivoActual.size;
-  const tamFinal = window.archivoActual ? (window.archivoActual.size || tam) : tam;
-  tamano.textContent = formatBytes(tam) + (fileOriginal.type !== 'application/pdf' ? ' → ' + formatBytes(tamFinal) + ' comprimida' : '');
-  if(fileOriginal.type === 'application/pdf') {
-    thumb.innerHTML = '📄';
-  } else if(dataUrl) {
-    thumb.innerHTML = '<img src="'+dataUrl+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">';
-  }
-  preview.style.display = 'block';
-  document.getElementById('docDescripcion').value = '';
-}
+// mostrarPreview eliminada - ahora se usa renderCola
 
 function cancelarPreview() {
   window.archivoActual = null;
