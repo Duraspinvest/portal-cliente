@@ -311,29 +311,68 @@ function formatBytes(bytes) {
 function procesarArchivo(input) {
   const file = input.files[0];
   if(!file) return;
-  // Límite 900KB para dejar margen con Base64 overhead (~33%)
-  if(file.size > 900 * 1024) {
-    showToast('El archivo es demasiado grande (máx. 900KB). Intenta comprimir la imagen.');
-    input.value = '';
-    return;
+  input.value = '';
+
+  if(file.type === 'application/pdf') {
+    // PDF: límite 900KB sin compresión
+    if(file.size > 1500 * 1024) {
+      showToast('El PDF es demasiado grande (máx. 900KB). Prueba a reducir la calidad al escanear.');
+      return;
+    }
+    window.archivoActual = file;
+    mostrarPreview(file, null);
+  } else {
+    // Imagen: comprimir automáticamente
+    comprimirImagen(file, 800, 0.6).then(resultado => {
+      window.archivoActual = resultado.blob;
+      window.archivoActual.name = file.name;
+      mostrarPreview(file, resultado.dataUrl);
+    });
   }
-  window.archivoActual = file;
+}
+
+function comprimirImagen(file, maxDim, calidad) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim/w, maxDim/h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', calidad);
+        canvas.toBlob(blob => resolve({ blob, dataUrl }), 'image/jpeg', calidad);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function mostrarPreview(fileOriginal, dataUrl) {
   const preview = document.getElementById('previewArea');
   const thumb = document.getElementById('previewThumb');
   const nombre = document.getElementById('previewNombre');
   const tamano = document.getElementById('previewTamano');
-  nombre.textContent = file.name;
-  tamano.textContent = formatBytes(file.size);
-  if(file.type === 'application/pdf') {
-    thumb.textContent = '📄';
-  } else {
-    const reader = new FileReader();
-    reader.onload = e => { thumb.innerHTML = '<img src="'+e.target.result+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">'; };
-    reader.readAsDataURL(file);
+  nombre.textContent = fileOriginal.name;
+  const tam = window.archivoActual.size || window.archivoActual.size;
+  tamano.textContent = formatBytes(tam) + (fileOriginal.type !== 'application/pdf' ? ' (comprimida)' : '');
+  if(fileOriginal.type === 'application/pdf') {
+    thumb.innerHTML = '📄';
+  } else if(dataUrl) {
+    thumb.innerHTML = '<img src="'+dataUrl+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">';
   }
   preview.style.display = 'block';
   document.getElementById('docDescripcion').value = '';
-  input.value = '';
 }
 
 function cancelarPreview() {
@@ -345,6 +384,12 @@ async function subirDocumento() {
   const file = window.archivoActual;
   if(!file || !window.currentUser) return;
 
+  // Verificar tamaño después de comprimir
+  const archivoFinal = window.archivoActual;
+  if(archivoFinal && archivoFinal.size > 700 * 1024) {
+    showToast('Imagen aún muy grande tras comprimir (' + Math.round(archivoFinal.size/1024) + 'KB). Prueba con otra foto.');
+    return;
+  }
   const btnSubir = document.getElementById('btnSubir');
   const progressWrap = document.getElementById('progressWrap');
   const progressFill = document.getElementById('progressFill');
@@ -358,14 +403,17 @@ async function subirDocumento() {
 
   try {
     // Convertir a Base64
-    const base64 = await fileToBase64(file);
+    // archivoActual puede ser File o Blob comprimido
+    const base64 = await fileToBase64(window.archivoActual);
     progressFill.style.width = '60%';
     progressText.textContent = 'Subiendo a la nube...';
 
     // Generar thumbnail si es imagen
     let thumbnail = null;
-    if(file.type.startsWith('image/')) {
-      thumbnail = await generarThumbnail(base64, file.type);
+    if(file.type && file.type.startsWith('image/')) {
+      thumbnail = await generarThumbnail(base64, 'image/jpeg');
+    } else if(!file.type && window.archivoActual.type && window.archivoActual.type.startsWith('image/')) {
+      thumbnail = await generarThumbnail(base64, 'image/jpeg');
     }
 
     const id = String(Date.now());
@@ -377,8 +425,8 @@ async function subirDocumento() {
       userId: window.currentUser.uid,
       nombreArchivo: file.name,
       descripcion: descripcion || file.name,
-      tipo: file.type,
-      tamano: file.size,
+      tipo: (window.archivoActual.type || file.type || 'image/jpeg'),
+      tamano: (window.archivoActual.size || file.size || 0),
       datos: base64,
       thumbnail: thumbnail,
       estado: 'pendiente',
