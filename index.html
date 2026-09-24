@@ -148,14 +148,14 @@ main{padding:16px;max-width:600px;margin:0 auto;}
     <div style="font-size:12px;color:var(--gray-400);margin-bottom:14px;">Fotografía o adjunta las facturas que quieres que gestione tu asesor.</div>
 
     <div class="btn-row">
-      <button class="btn btn-camera" onclick="document.getElementById('inputCamara').click()">
-        📷 Fotografiar factura
+      <button class="btn btn-camera" onclick="document.getElementById('inputImagen').click()">
+        📷 Foto / Imagen
       </button>
       <button class="btn btn-pdf" onclick="document.getElementById('inputArchivo').click()">
         📎 Adjuntar PDF
       </button>
     </div>
-    <input type="file" id="inputCamara" accept="image/*" capture="environment" style="display:none" onchange="procesarArchivo(this)">
+    <input type="file" id="inputImagen" accept="image/*" style="display:none" onchange="procesarArchivo(this)">
     <input type="file" id="inputArchivo" accept="image/*,application/pdf" style="display:none" onchange="procesarArchivo(this)">
 
     <!-- Preview y progreso -->
