@@ -323,7 +323,7 @@ function procesarArchivo(input) {
     mostrarPreview(file, null);
   } else {
     // Imagen: comprimir automáticamente
-    comprimirImagen(file, 800, 0.6).then(resultado => {
+    comprimirImagen(file, 600, 0.5).then(resultado => {
       window.archivoActual = resultado.blob;
       window.archivoActual.name = file.name;
       mostrarPreview(file, resultado.dataUrl);
@@ -365,7 +365,8 @@ function mostrarPreview(fileOriginal, dataUrl) {
   const tamano = document.getElementById('previewTamano');
   nombre.textContent = fileOriginal.name;
   const tam = window.archivoActual.size || window.archivoActual.size;
-  tamano.textContent = formatBytes(tam) + (fileOriginal.type !== 'application/pdf' ? ' (comprimida)' : '');
+  const tamFinal = window.archivoActual ? (window.archivoActual.size || tam) : tam;
+  tamano.textContent = formatBytes(tam) + (fileOriginal.type !== 'application/pdf' ? ' → ' + formatBytes(tamFinal) + ' comprimida' : '');
   if(fileOriginal.type === 'application/pdf') {
     thumb.innerHTML = '📄';
   } else if(dataUrl) {
@@ -386,8 +387,8 @@ async function subirDocumento() {
 
   // Verificar tamaño después de comprimir
   const archivoFinal = window.archivoActual;
-  if(archivoFinal && archivoFinal.size > 700 * 1024) {
-    showToast('Imagen aún muy grande tras comprimir (' + Math.round(archivoFinal.size/1024) + 'KB). Prueba con otra foto.');
+  if(archivoFinal && archivoFinal.size > 900 * 1024) {
+    showToast('Imagen aún muy grande tras comprimir (' + Math.round(archivoFinal.size/1024) + 'KB). Intenta con una foto menos detallada.');
     return;
   }
   const btnSubir = document.getElementById('btnSubir');
