@@ -283,13 +283,26 @@ async function subirDocumento() {
         creado: new Date().toISOString(),
         reenviado: false
       });
-      // Marcar docs eliminados anteriores del mismo usuario como "reenviados" (ocultar)
-      const docsEliminados = (window.misDocumentos||[]).filter(d => d.estado === 'eliminada');
+      // Marcar docs eliminados anteriores como reenviados (solo actualizar campos clave, sin el blob)
+      const docsEliminados = (window.misDocumentos||[]).filter(d => d.estado === 'eliminada' && !d.reenviado);
       for(const de of docsEliminados) {
         try {
-          await window.fsSetDoc(window.fsDoc(window.db, 'portal_documentos', de.id),
-            Object.assign({}, de, { estado: 'eliminada', reenviado: true }));
-        } catch(e) { console.error(e); }
+          // Usar updateDoc-style: guardar solo los campos que cambian sin el blob pesado
+          await window.fsSetDoc(window.fsDoc(window.db, 'portal_documentos', de.id), {
+            id: de.id,
+            userEmail: de.userEmail,
+            userId: de.userId,
+            nombreArchivo: de.nombreArchivo,
+            descripcion: de.descripcion,
+            tipo: de.tipo,
+            tamano: de.tamano,
+            thumbnail: de.thumbnail || null,
+            estado: 'eliminada',
+            eliminada: de.eliminada || new Date().toISOString(),
+            reenviado: true,
+            creado: de.creado
+          });
+        } catch(e) { console.error('Error marcando reenviado:', e); }
       }
       enviados++;
     } catch(err) {
