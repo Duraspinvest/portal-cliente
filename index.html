@@ -241,6 +241,57 @@ main{padding:16px;max-width:600px;margin:0 auto;}
 window.misDocumentos = [];
 window.archivoActual = null;
 
+async function subirDocumento() {
+  if(!window.colaArchivos || !window.colaArchivos.length || !window.currentUser) {
+    alert('No hay archivos en la cola o no has iniciado sesion.');
+    return;
+  }
+  const btnSubir = document.getElementById('btnSubir');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  if(btnSubir) { btnSubir.disabled = true; btnSubir.innerHTML = 'Enviando...'; }
+  if(progressWrap) progressWrap.style.display = 'block';
+  const total = window.colaArchivos.length;
+  let enviados = 0, errores = 0;
+  for(const f of window.colaArchivos) {
+    try {
+      if(progressFill) progressFill.style.width = Math.round((enviados/total)*100) + '%';
+      if(progressText) progressText.textContent = 'Enviando ' + (enviados+1) + ' de ' + total + '...';
+      const id = String(Date.now()) + '_' + enviados;
+      await window.fsSetDoc(window.fsDoc(window.db, 'portal_documentos', id), {
+        id,
+        userEmail: window.currentUser.email,
+        userId: window.currentUser.uid,
+        nombreArchivo: f.nombre,
+        descripcion: f.descripcion || f.nombre,
+        tipo: f.tipo,
+        tamano: f.tamano,
+        datos: f.datos,
+        thumbnail: f.thumbnail || null,
+        estado: 'pendiente',
+        creado: new Date().toISOString()
+      });
+      enviados++;
+    } catch(err) {
+      console.error('Error enviando:', err);
+      errores++;
+    }
+  }
+  if(progressFill) progressFill.style.width = '100%';
+  showToast(errores === 0
+    ? (total === 1 ? 'Documento enviado correctamente' : total + ' documentos enviados')
+    : enviados + ' enviados, ' + errores + ' con error'
+  );
+  setTimeout(() => {
+    window.colaArchivos = [];
+    renderCola();
+    if(progressWrap) progressWrap.style.display = 'none';
+    if(progressFill) progressFill.style.width = '0%';
+    if(btnSubir) { btnSubir.disabled = false; btnSubir.innerHTML = '&#128229; Enviar al asesor'; }
+  }, 1500);
+}
+
 function doLogin() {
   const e = document.getElementById('loginEmail').value.trim();
   const p = document.getElementById('loginPassword').value;
