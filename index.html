@@ -155,8 +155,8 @@ main{padding:16px;max-width:600px;margin:0 auto;}
         📎 Adjuntar PDF
       </button>
     </div>
-    <input type="file" id="inputImagen" accept="image/*" style="display:none" onchange="procesarArchivo(this)">
-    <input type="file" id="inputArchivo" accept="image/*,application/pdf" style="display:none" onchange="procesarArchivo(this)">
+    <input type="file" id="inputImagen" accept="image/*" multiple style="display:none" onchange="procesarArchivos(this)">
+    <input type="file" id="inputArchivo" accept="image/*,application/pdf" multiple style="display:none" onchange="procesarArchivos(this)">
 
     <!-- Cola de archivos -->
     <div id="previewArea" style="display:none;margin-top:14px;">
@@ -350,6 +350,24 @@ function formatBytes(bytes) {
 }
 
 window.colaArchivos = [];
+
+async function procesarArchivos(input) {
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  input.value = '';
+  showToast('Procesando ' + files.length + ' archivo' + (files.length > 1 ? 's' : '') + '...');
+  for(const file of files) {
+    if(file.type === 'application/pdf') {
+      if(file.size > 1500 * 1024) { showToast('PDF "' + file.name + '" demasiado grande, omitido.'); continue; }
+      const b64 = await fileToBase64(file);
+      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: file.size, datos: b64, thumbnail: null, descripcion: '' });
+    } else {
+      const resultado = await comprimirImagen(file, 600, 0.5);
+      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: resultado.blob.size, datos: resultado.dataUrl, thumbnail: resultado.dataUrl, descripcion: '' });
+    }
+  }
+  renderCola();
+}
 
 function procesarArchivo(input) {
   const file = input.files[0];
