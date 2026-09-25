@@ -280,8 +280,17 @@ async function subirDocumento() {
         datos: f.datos,
         thumbnail: f.thumbnail || null,
         estado: 'pendiente',
-        creado: new Date().toISOString()
+        creado: new Date().toISOString(),
+        reenviado: false
       });
+      // Marcar docs eliminados anteriores del mismo usuario como "reenviados" (ocultar)
+      const docsEliminados = (window.misDocumentos||[]).filter(d => d.estado === 'eliminada');
+      for(const de of docsEliminados) {
+        try {
+          await window.fsSetDoc(window.fsDoc(window.db, 'portal_documentos', de.id),
+            Object.assign({}, de, { estado: 'eliminada', reenviado: true }));
+        } catch(e) { console.error(e); }
+      }
       enviados++;
     } catch(err) {
       console.error('Error enviando:', err);
@@ -352,7 +361,7 @@ function filtrarDocs(filtro) {
 
 function renderDocumentos() {
   const lista = document.getElementById('docsList');
-  const todos = window.misDocumentos || [];
+  const todos = (window.misDocumentos || []).filter(d => !d.reenviado);
   const docs = _filtroDoc ? todos.filter(d => d.estado === _filtroDoc) : todos;
   if(!todos.length) {
     lista.innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div>Aún no has enviado ningún documento.</div></div>';
