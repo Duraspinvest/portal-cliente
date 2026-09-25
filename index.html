@@ -61,6 +61,7 @@ main{padding:16px;max-width:600px;margin:0 auto;}
 .doc-estado{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;}
 .estado-pendiente{background:#FEF3C7;color:#92400E;}
 .estado-procesada{background:#D1FAE5;color:#065F46;}
+.estado-eliminada{background:#FEE2E2;color:#991B1B;}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
@@ -140,6 +141,7 @@ main{padding:16px;max-width:600px;margin:0 auto;}
     <div class="stat"><div class="stat-num" id="stTotal">0</div><div class="stat-label">Enviadas</div></div>
     <div class="stat"><div class="stat-num" id="stPend" style="color:var(--warning);">0</div><div class="stat-label">Pendientes</div></div>
     <div class="stat"><div class="stat-num" id="stProc" style="color:var(--success);">0</div><div class="stat-label">Procesadas</div></div>
+    <div class="stat"><div class="stat-num" id="stElim" style="color:#EF4444;">0</div><div class="stat-label">Reenviar</div></div>
   </div>
 
   <!-- SUBIR DOCUMENTO -->
@@ -180,6 +182,7 @@ main{padding:16px;max-width:600px;margin:0 auto;}
         <button onclick="filtrarDocs('')" id="filtTodos" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--navy);background:var(--navy);color:white;font-size:12px;cursor:pointer;font-family:inherit;">Todos</button>
         <button onclick="filtrarDocs('pendiente')" id="filtPend" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--warning);background:white;color:var(--warning);font-size:12px;cursor:pointer;font-family:inherit;">Pendientes</button>
         <button onclick="filtrarDocs('procesada')" id="filtProc" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--success);background:white;color:var(--success);font-size:12px;cursor:pointer;font-family:inherit;">Procesadas</button>
+        <button onclick="filtrarDocs('eliminada')" id="filtElim" style="padding:5px 12px;border-radius:20px;border:1.5px solid #EF4444;background:white;color:#EF4444;font-size:12px;cursor:pointer;font-family:inherit;">Reenviar</button>
       </div>
     </div>
     <div id="docsList">
@@ -323,6 +326,9 @@ function renderStats() {
   const docs = window.misDocumentos || [];
   document.getElementById('stTotal').textContent = docs.length;
   document.getElementById('stPend').textContent = docs.filter(d => d.estado === 'pendiente').length;
+  const elimCount = docs.filter(d => d.estado === 'eliminada').length;
+  const stElim = document.getElementById('stElim');
+  if(stElim) stElim.textContent = elimCount;
   document.getElementById('stProc').textContent = docs.filter(d => d.estado === 'procesada').length;
 }
 
@@ -335,10 +341,10 @@ function filtrarDocs(filtro) {
     btn.style.background = 'white';
     btn.style.color = btn.id === 'filtTodos' ? 'var(--navy)' : btn.id === 'filtPend' ? 'var(--warning)' : 'var(--success)';
   });
-  const activo = filtro === '' ? 'filtTodos' : filtro === 'pendiente' ? 'filtPend' : 'filtProc';
+  const activo = filtro === '' ? 'filtTodos' : filtro === 'pendiente' ? 'filtPend' : filtro === 'procesada' ? 'filtProc' : 'filtElim';
   const btnActivo = document.getElementById(activo);
   if(btnActivo) {
-    btnActivo.style.background = filtro === '' ? 'var(--navy)' : filtro === 'pendiente' ? 'var(--warning)' : 'var(--success)';
+    btnActivo.style.background = filtro === '' ? 'var(--navy)' : filtro === 'pendiente' ? 'var(--warning)' : filtro === 'procesada' ? 'var(--success)' : '#EF4444';
     btnActivo.style.color = 'white';
   }
   renderDocumentos();
@@ -361,8 +367,8 @@ function renderDocumentos() {
     const fechaProc = d.procesada ? new Date(d.procesada).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) : '';
     const esPdf = d.tipo === 'application/pdf';
     const thumb = esPdf ? '📄' : (d.thumbnail ? '<img src="'+d.thumbnail+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">' : '🖼️');
-    const estadoClass = d.estado === 'procesada' ? 'estado-procesada' : 'estado-pendiente';
-    const estadoLabel = d.estado === 'procesada' ? '✓ Procesada' : '⏳ Pendiente';
+    const estadoClass = d.estado === 'procesada' ? 'estado-procesada' : d.estado === 'eliminada' ? 'estado-eliminada' : 'estado-pendiente';
+    const estadoLabel = d.estado === 'procesada' ? '✓ Procesada' : d.estado === 'eliminada' ? '❌ Reenviar' : '⏳ Pendiente';
     return '<div class="doc-item">' +
       '<div class="doc-thumb">' + thumb + '</div>' +
       '<div class="doc-info">' +
