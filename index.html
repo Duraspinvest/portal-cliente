@@ -174,7 +174,14 @@ main{padding:16px;max-width:600px;margin:0 auto;}
 
   <!-- LISTA DE DOCUMENTOS -->
   <div class="card">
-    <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:14px;">Mis documentos enviados</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;font-weight:600;color:var(--navy);">Mis documentos enviados</div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="filtrarDocs('')" id="filtTodos" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--navy);background:var(--navy);color:white;font-size:12px;cursor:pointer;font-family:inherit;">Todos</button>
+        <button onclick="filtrarDocs('pendiente')" id="filtPend" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--warning);background:white;color:var(--warning);font-size:12px;cursor:pointer;font-family:inherit;">Pendientes</button>
+        <button onclick="filtrarDocs('procesada')" id="filtProc" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--success);background:white;color:var(--success);font-size:12px;cursor:pointer;font-family:inherit;">Procesadas</button>
+      </div>
+    </div>
     <div id="docsList">
       <div class="empty"><div class="empty-icon">📂</div><div>Aún no has enviado ningún documento.</div></div>
     </div>
@@ -319,15 +326,39 @@ function renderStats() {
   document.getElementById('stProc').textContent = docs.filter(d => d.estado === 'procesada').length;
 }
 
+let _filtroDoc = '';
+function filtrarDocs(filtro) {
+  _filtroDoc = filtro;
+  ['filtTodos','filtPend','filtProc'].forEach(id => {
+    const btn = document.getElementById(id);
+    if(!btn) return;
+    btn.style.background = 'white';
+    btn.style.color = btn.id === 'filtTodos' ? 'var(--navy)' : btn.id === 'filtPend' ? 'var(--warning)' : 'var(--success)';
+  });
+  const activo = filtro === '' ? 'filtTodos' : filtro === 'pendiente' ? 'filtPend' : 'filtProc';
+  const btnActivo = document.getElementById(activo);
+  if(btnActivo) {
+    btnActivo.style.background = filtro === '' ? 'var(--navy)' : filtro === 'pendiente' ? 'var(--warning)' : 'var(--success)';
+    btnActivo.style.color = 'white';
+  }
+  renderDocumentos();
+}
+
 function renderDocumentos() {
   const lista = document.getElementById('docsList');
-  const docs = window.misDocumentos || [];
-  if(!docs.length) {
+  const todos = window.misDocumentos || [];
+  const docs = _filtroDoc ? todos.filter(d => d.estado === _filtroDoc) : todos;
+  if(!todos.length) {
     lista.innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div>Aún no has enviado ningún documento.</div></div>';
+    return;
+  }
+  if(!docs.length) {
+    lista.innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div>No hay documentos ' + (_filtroDoc === 'pendiente' ? 'pendientes' : 'procesados') + '.</div></div>';
     return;
   }
   lista.innerHTML = docs.map(d => {
     const fecha = new Date(d.creado).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const fechaProc = d.procesada ? new Date(d.procesada).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) : '';
     const esPdf = d.tipo === 'application/pdf';
     const thumb = esPdf ? '📄' : (d.thumbnail ? '<img src="'+d.thumbnail+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">' : '🖼️');
     const estadoClass = d.estado === 'procesada' ? 'estado-procesada' : 'estado-pendiente';
@@ -336,7 +367,7 @@ function renderDocumentos() {
       '<div class="doc-thumb">' + thumb + '</div>' +
       '<div class="doc-info">' +
         '<div class="doc-nombre">' + (d.descripcion || d.nombreArchivo || 'Documento') + '</div>' +
-        '<div class="doc-meta">' + fecha + ' · ' + formatBytes(d.tamano||0) + '</div>' +
+        '<div class="doc-meta">Enviado: ' + fecha + ' · ' + formatBytes(d.tamano||0) + (fechaProc ? '<br>Procesado: ' + fechaProc : '') + '</div>' +
       '</div>' +
       '<span class="doc-estado ' + estadoClass + '">' + estadoLabel + '</span>' +
     '</div>';
