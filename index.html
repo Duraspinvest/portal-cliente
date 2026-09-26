@@ -273,12 +273,9 @@ async function subirDocumento() {
       if(progressText) progressText.textContent = 'Enviando ' + (enviados+1) + ' de ' + total + '...';
       const id = String(Date.now()) + '_' + enviados;
 
-      // Subir archivo a Firebase Storage
+      // Subir archivo original a Firebase Storage
       const storageRef = window.fsRef(window.storage, 'portal/' + window.currentUser.uid + '/' + id + '_' + f.nombre);
-      // Convertir base64 a Blob para subir a Storage
-      const response = await fetch(f.datos);
-      const blob = await response.blob();
-      await window.fsUploadBytes(storageRef, blob);
+      await window.fsUploadBytes(storageRef, f.fileOriginal);
       const downloadURL = await window.fsGetDownloadURL(storageRef);
 
       // Guardar solo metadatos en Firestore (sin el base64)
@@ -431,34 +428,22 @@ async function procesarArchivos(input) {
   showToast('Procesando ' + files.length + ' archivo' + (files.length > 1 ? 's' : '') + '...');
   for(const file of files) {
     if(file.type === 'application/pdf') {
-      if(file.size > 1500 * 1024) { showToast('PDF "' + file.name + '" demasiado grande, omitido.'); continue; }
-      const b64 = await fileToBase64(file);
-      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: file.size, datos: b64, thumbnail: null, descripcion: '' });
+      // PDF: guardar archivo original para subir a Storage
+      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: file.size, fileOriginal: file, thumbnail: null, descripcion: '' });
     } else {
-      const resultado = await comprimirImagen(file, 600, 0.5);
-      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: resultado.blob.size, datos: resultado.dataUrl, thumbnail: resultado.dataUrl, descripcion: '' });
+      // Imagen: guardar archivo original + generar thumbnail pequeño para preview
+      const thumb = await comprimirImagen(file, 120, 0.6);
+      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: file.size, fileOriginal: file, thumbnail: thumb.dataUrl, descripcion: '' });
     }
   }
   renderCola();
 }
 
 function procesarArchivo(input) {
-  const file = input.files[0];
-  if(!file) return;
+  const files = Array.from(input.files);
+  if(!files.length) return;
   input.value = '';
-  if(file.type === 'application/pdf') {
-    if(file.size > 1500 * 1024) { showToast('El PDF es demasiado grande (max. 1.5MB).'); return; }
-    fileToBase64(file).then(b64 => {
-      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: file.size, datos: b64, thumbnail: null, descripcion: '' });
-      renderCola();
-    });
-  } else {
-    showToast('Comprimiendo imagen...');
-    comprimirImagen(file, 600, 0.5).then(resultado => {
-      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: resultado.blob.size, datos: resultado.dataUrl, thumbnail: resultado.dataUrl, descripcion: '' });
-      renderCola();
-    });
-  }
+  procesarArchivos({ files: files });
 }
 
 function renderCola() {
