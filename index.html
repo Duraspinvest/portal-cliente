@@ -200,6 +200,7 @@ main{padding:16px;max-width:600px;margin:0 auto;}
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const app = initializeApp({
     apiKey: "AIzaSyCVK3yF15Udps1l046kv6M1TASIwVEPcVs",
@@ -211,9 +212,11 @@ main{padding:16px;max-width:600px;margin:0 auto;}
   });
 
   const db = getFirestore(app);
+  const storage = getStorage(app);
   const auth = getAuth(app);
-  window.db = db; window.auth = auth;
+  window.db = db; window.auth = auth; window.storage = storage;
   window.fsSignIn = signInWithEmailAndPassword;
+  window.fsRef = ref; window.fsUploadBytes = uploadBytes; window.fsGetDownloadURL = getDownloadURL; window.fsDeleteObject = deleteObject;
   window.fsSignOut = signOut;
   window.fsDoc = doc; window.fsSetDoc = setDoc; window.fsDeleteDoc = deleteDoc;
   window.fsCollection = collection;
@@ -269,6 +272,16 @@ async function subirDocumento() {
       if(progressFill) progressFill.style.width = Math.round((enviados/total)*100) + '%';
       if(progressText) progressText.textContent = 'Enviando ' + (enviados+1) + ' de ' + total + '...';
       const id = String(Date.now()) + '_' + enviados;
+
+      // Subir archivo a Firebase Storage
+      const storageRef = window.fsRef(window.storage, 'portal/' + window.currentUser.uid + '/' + id + '_' + f.nombre);
+      // Convertir base64 a Blob para subir a Storage
+      const response = await fetch(f.datos);
+      const blob = await response.blob();
+      await window.fsUploadBytes(storageRef, blob);
+      const downloadURL = await window.fsGetDownloadURL(storageRef);
+
+      // Guardar solo metadatos en Firestore (sin el base64)
       await window.fsSetDoc(window.fsDoc(window.db, 'portal_documentos', id), {
         id,
         userEmail: window.currentUser.email,
@@ -277,7 +290,8 @@ async function subirDocumento() {
         descripcion: f.descripcion || f.nombre,
         tipo: f.tipo,
         tamano: f.tamano,
-        datos: f.datos,
+        storageUrl: downloadURL,
+        storagePath: 'portal/' + window.currentUser.uid + '/' + id + '_' + f.nombre,
         thumbnail: f.thumbnail || null,
         estado: 'pendiente',
         creado: new Date().toISOString(),
@@ -388,7 +402,7 @@ function renderDocumentos() {
     const fecha = new Date(d.creado).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
     const fechaProc = d.procesada ? new Date(d.procesada).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) : '';
     const esPdf = d.tipo === 'application/pdf';
-    const thumb = esPdf ? '📄' : (d.thumbnail ? '<img src="'+d.thumbnail+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">' : '🖼️');
+    const thumb = esPdf ? '📄' : (d.thumbnail ? '<img src="'+d.thumbnail+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">' : (d.storageUrl ? '<img src="'+d.storageUrl+'" style="width:52px;height:52px;border-radius:7px;object-fit:cover;">' : '🖼️'));
     const estadoClass = d.estado === 'procesada' ? 'estado-procesada' : d.estado === 'eliminada' ? 'estado-eliminada' : 'estado-pendiente';
     const estadoLabel = d.estado === 'procesada' ? '✓ Procesada' : d.estado === 'eliminada' ? '❌ Reenviar' : '⏳ Pendiente';
     return '<div class="doc-item">' +
