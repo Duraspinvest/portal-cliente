@@ -95,7 +95,10 @@ main{padding:16px;max-width:600px;margin:0 auto;}
 
 @media(max-width:400px){.btn-row{grid-template-columns:1fr;}.stats-row{grid-template-columns:1fr 1fr;}}
 </style>
-<link rel="manifest" href="data:application/json,{%22name%22:%22Portal%20Durespin%22,%22short_name%22:%22Portal%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230A2540%22,%22theme_color%22:%22%230A2540%22,%22icons%22:[{%22src%22:%22https://duraspinvest.github.io/portal-cliente/icon.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]}">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
 
@@ -570,5 +573,6 @@ function generarThumbnail(base64, tipo) {
   });
 }
 </script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
 </body>
 </html>
