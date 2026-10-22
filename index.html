@@ -130,18 +130,29 @@ main{padding:16px;max-width:600px;margin:0 auto;}
   </div>
   <div style="background:white;border-radius:14px;padding:24px;width:100%;max-width:340px;box-shadow:var(--shadow-lg);">
     <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:16px;text-align:center;">Accede a tu portal</div>
+    <form id="loginForm" onsubmit="doLogin();return false;" autocomplete="on">
     <div style="margin-bottom:10px;">
-      <label style="font-size:11px;font-weight:600;color:#4A5A6B;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Email</label>
-      <input type="email" id="loginEmail" placeholder="tu@email.com" style="width:100%;padding:10px 12px;border:1.5px solid #D6DEE8;border-radius:8px;font-size:14px;outline:none;font-family:inherit;">
+      <label for="loginEmail" style="font-size:11px;font-weight:600;color:#4A5A6B;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Usuario</label>
+      <input type="text" id="loginEmail" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="tu usuario" style="width:100%;padding:10px 12px;border:1.5px solid #D6DEE8;border-radius:8px;font-size:16px;outline:none;font-family:inherit;">
     </div>
     <div style="margin-bottom:14px;">
-      <label style="font-size:11px;font-weight:600;color:#4A5A6B;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Contrasena</label>
-      <input type="password" id="loginPassword" placeholder="..." style="width:100%;padding:10px 12px;border:1.5px solid #D6DEE8;border-radius:8px;font-size:14px;outline:none;font-family:inherit;">
+      <label for="loginPassword" style="font-size:11px;font-weight:600;color:#4A5A6B;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Contraseña</label>
+      <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="••••••••" style="width:100%;padding:10px 12px;border:1.5px solid #D6DEE8;border-radius:8px;font-size:16px;outline:none;font-family:inherit;">
     </div>
-    <div id="loginError" style="color:#EF4444;font-size:12px;margin-bottom:10px;display:none;">Email o contrasena incorrectos</div>
-    <button onclick="doLogin()" style="width:100%;padding:12px;background:#0A2540;color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;">Entrar</button>
+    <div id="loginError" style="color:#EF4444;font-size:12px;margin-bottom:10px;display:none;">Usuario o contraseña incorrectos</div>
+    <button type="submit" style="width:100%;padding:12px;background:#0A2540;color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;">Entrar</button>
+    </form>
     <div style="font-size:11px;color:var(--gray-400);text-align:center;margin-top:12px;">Si no tienes acceso, contacta con tu asesor.</div>
   </div>
+</div>
+
+<!-- BLOQUEO CON HUELLA -->
+<div id="lockPortal" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:1001;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:24px;">
+  <div style="color:white;font-size:20px;font-weight:600;">Durespin</div>
+  <div style="color:var(--gray-400);font-size:13px;">Portal del cliente</div>
+  <button onclick="desbloquearHuella()" style="width:100%;max-width:300px;padding:14px;background:#EFF6FF;color:#1B4F8A;border:1.5px solid #BFDBFE;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;">👆 Entrar con huella o cara</button>
+  <div id="lockPortalErr" style="color:#FCA5A5;font-size:13px;display:none;text-align:center;max-width:300px;"></div>
+  <a href="#" onclick="entrarConContrasena();return false;" style="color:#8A9BB0;font-size:13px;">Entrar con usuario y contraseña</a>
 </div>
 
 <div id="appContent" style="display:none;flex-direction:column;min-height:100vh;">
@@ -162,6 +173,7 @@ main{padding:16px;max-width:600px;margin:0 auto;}
 </div>
 
 <main id="tab_facturas">
+  <div id="avisoHuella"></div>
   <!-- STATS -->
   <div class="stats-row">
     <div class="stat"><div class="stat-num" id="stTotal">0</div><div class="stat-label">Enviadas</div></div>
@@ -252,8 +264,20 @@ main{padding:16px;max-width:600px;margin:0 auto;}
   let unsubDocs;
 
   onAuthStateChanged(auth, user => {
+    if(user && window.huellaActiva && window.huellaActiva(user.uid) && sessionStorage.getItem('portal_desbloqueado') !== user.uid) {
+      // Sesión abierta y huella activada: pedir la huella antes de enseñar nada
+      window._pendingUser = user;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appContent').style.display = 'none';
+      document.getElementById('lockPortal').style.display = 'flex';
+      setTimeout(() => window.desbloquearHuella && window.desbloquearHuella(), 300);
+      return;
+    }
     if(user) {
+      document.getElementById('lockPortal').style.display = 'none';
       window.currentUser = user;
+      if(window.huellaActiva(user.uid)) sessionStorage.setItem('portal_desbloqueado', user.uid);
+      setTimeout(() => window.pintarAvisoHuella && window.pintarAvisoHuella(), 500);
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appContent').style.display = 'flex';
       document.getElementById('clienteBadge').textContent = user.email.split('@')[0];
@@ -403,7 +427,8 @@ window.colaArchivos = [];
 }
 
 function doLogin() {
-  const e = document.getElementById('loginEmail').value.trim();
+  let e = document.getElementById('loginEmail').value.trim().toLowerCase();
+  if(e && !e.includes('@')) e += '@portal.facturas';   // basta con escribir el usuario
   const p = document.getElementById('loginPassword').value;
   document.getElementById('loginError').style.display = 'none';
   if(!e || !p) return;
@@ -411,9 +436,62 @@ function doLogin() {
     document.getElementById('loginError').style.display = 'block';
   });
 }
-function doLogout() { window.fsSignOut(window.auth); }
-document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPassword').focus(); });
-document.getElementById('loginPassword').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+function doLogout() { sessionStorage.removeItem('portal_desbloqueado'); window.fsSignOut(window.auth); }
+
+// ===== Entrar con huella / cara (WebAuthn del propio móvil). La contraseña no se guarda en el dispositivo:
+// la sesión de Firebase se queda abierta y la huella solo la desbloquea. Si pierde el móvil, la contraseña sigue siendo la llave.
+const _hk = uid => 'portal_huella_' + uid, _hn = uid => 'portal_huella_no_' + uid;
+window.huellaActiva = uid => { try { return !!localStorage.getItem(_hk(uid)); } catch(e) { return false; } };
+async function huellaDisponible() {
+  try { return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch(e) { return false; }
+}
+async function activarHuella() {
+  const u = window.currentUser; if(!u) return;
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge, rp: { name: 'Durespin · Portal', id: location.hostname },
+      user: { id: new TextEncoder().encode('portal-' + u.uid), name: u.email.split('@')[0], displayName: 'Portal Durespin' },
+      pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+      timeout: 60000 } });
+    localStorage.setItem(_hk(u.uid), btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+    sessionStorage.setItem('portal_desbloqueado', u.uid);
+    pintarAvisoHuella(); showToast('Huella activada. La próxima vez entrarás con ella.', 4000);
+  } catch(e) { console.warn(e); alert('No se ha podido activar. Comprueba que tu móvil tiene la huella o la cara configurada.'); }
+}
+window.activarHuella = activarHuella;
+window.desbloquearHuella = async function () {
+  const u = window._pendingUser || (window.auth && window.auth.currentUser); if(!u) { entrarConContrasena(); return; }
+  const err = document.getElementById('lockPortalErr'); if(err) err.style.display = 'none';
+  try {
+    const id = Uint8Array.from(atob(localStorage.getItem(_hk(u.uid)) || ''), c => c.charCodeAt(0));
+    await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rpId: location.hostname,
+      allowCredentials: [{ type: 'public-key', id }], userVerification: 'required', timeout: 60000 } });
+    sessionStorage.setItem('portal_desbloqueado', u.uid);
+    window._pendingUser = null;
+    location.reload();   // vuelve a entrar ya desbloqueado
+  } catch(e) {
+    if(err) { err.textContent = 'No se ha reconocido. Vuelve a intentarlo o entra con tu usuario y contraseña.'; err.style.display = 'block'; }
+  }
+};
+function entrarConContrasena() { sessionStorage.removeItem('portal_desbloqueado'); window._pendingUser = null; document.getElementById('lockPortal').style.display = 'none'; window.fsSignOut(window.auth); }
+window.entrarConContrasena = entrarConContrasena;
+function desactivarHuella() { const u = window.currentUser; if(!u) return; localStorage.removeItem(_hk(u.uid)); pintarAvisoHuella(); showToast('Entrada con huella desactivada'); }
+window.desactivarHuella = desactivarHuella;
+window.ahoraNoHuella = function () { const u = window.currentUser; if(u) localStorage.setItem(_hn(u.uid), '1'); pintarAvisoHuella(); };
+// Aviso para activarla (una vez por móvil) y opción de desactivarla
+async function pintarAvisoHuella() {
+  const box = document.getElementById('avisoHuella'), u = window.currentUser; if(!box || !u) return;
+  if(!(await huellaDisponible())) { box.innerHTML = ''; return; }
+  if(window.huellaActiva(u.uid)) { box.innerHTML = "<div style='text-align:right;font-size:11px;color:var(--gray-400);margin:-4px 2px 8px;'>👆 Entrada con huella activada · <a href='#' onclick='desactivarHuella();return false;' style='color:var(--gray-400);'>desactivar</a></div>"; return; }
+  if(localStorage.getItem(_hn(u.uid))) { box.innerHTML = "<div style='text-align:right;font-size:11px;margin:-4px 2px 8px;'><a href='#' onclick='activarHuella();return false;' style='color:var(--gray-400);'>👆 Activar entrada con huella</a></div>"; return; }
+  box.innerHTML = "<div class='card' style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1.5px solid #BFDBFE;background:#EFF6FF;'><div style='font-size:26px;'>👆</div>" +
+    "<div style='flex:1;min-width:180px;font-size:13px;color:var(--navy);'><b>Entra con tu huella o tu cara</b><br><span style='color:var(--gray-600);font-size:12px;'>Así no tendrás que recordar la contraseña en este móvil.</span></div>" +
+    "<button class='btn btn-primary btn-sm' onclick='activarHuella()'>Activar</button><button class='btn btn-secondary btn-sm' onclick='ahoraNoHuella()'>Ahora no</button></div>";
+}
+window.pintarAvisoHuella = pintarAvisoHuella;
+
 
 function showToast(msg, duration=3000) {
   const t = document.getElementById('toast');
