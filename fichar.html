@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0A2540">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Durespin · Registro horario</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--navy:#0A2540;--navy-mid:#12345A;--navy-light:#1B4F8A;--gold:#D4A017;--accent:#2B7FFF;
+  --gray-50:#F8FAFC;--gray-100:#EEF2F7;--gray-200:#D6DEE8;--gray-400:#8A9BB0;--gray-600:#4A5A6B;--gray-800:#1E2C3A;
+  --ok:#10B981;--danger:#EF4444;--warn:#F59E0B;--radius:12px;--shadow:0 2px 8px rgba(10,37,64,0.10);}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--gray-50);color:var(--gray-800);min-height:100vh;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;font-size:15px;}
+.scr{display:none;}
+#login,#lock{position:fixed;inset:0;background:var(--navy);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:24px;}
+.lg-box{width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;}
+.lg-box label{color:#CBD5E1;font-size:12px;margin-bottom:-6px;}
+.lg-box input{padding:13px;border-radius:10px;border:none;background:rgba(255,255,255,0.1);color:white;outline:none;}
+.lg-box input:focus{background:rgba(255,255,255,0.16);}
+.b-main{padding:14px;border:none;border-radius:10px;background:var(--gold);color:var(--navy);font-size:15px;font-weight:600;}
+.b-sec{padding:12px;border-radius:10px;background:#EFF6FF;color:var(--navy-light);border:1.5px solid #BFDBFE;font-size:14px;font-weight:500;}
+.err{color:#FCA5A5;font-size:13px;text-align:center;display:none;}
+header{background:var(--navy);padding:0 16px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.h-t{color:white;font-size:14px;font-weight:600;} .h-s{color:var(--gray-400);font-size:10px;}
+.h-out{background:none;border:1px solid rgba(255,255,255,0.25);color:#CBD5E1;border-radius:8px;padding:6px 10px;font-size:12px;}
+main{max-width:760px;margin:0 auto;padding:16px;}
+.card{background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
+.estado{text-align:center;padding:22px 10px;}
+.estado .reloj{font-size:44px;font-weight:300;color:var(--navy);letter-spacing:1px;}
+.estado .fecha{font-size:13px;color:var(--gray-600);margin-top:2px;}
+.pill{display:inline-block;margin-top:12px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;}
+.pill.fuera{background:var(--gray-100);color:var(--gray-600);} .pill.dentro{background:#D1FAE5;color:#065F46;} .pill.pausa{background:#FEF3C7;color:#92400E;}
+.botones{display:grid;gap:10px;margin-top:16px;}
+.bf{padding:20px;border:none;border-radius:14px;font-size:18px;font-weight:600;color:white;}
+.bf.entrada{background:#059669;} .bf.salida{background:#DC2626;} .bf.pausa{background:#D97706;} .bf.reanuda{background:#2563EB;}
+.bf:disabled{opacity:0.5;}
+.lst .it{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--gray-100);font-size:14px;}
+.lst .it:last-child{border-bottom:none;}
+.muted{color:var(--gray-400);font-size:12px;}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.tab{padding:8px 14px;border-radius:20px;border:1px solid var(--gray-200);background:white;font-size:13px;color:var(--gray-600);}
+.tab.sel{background:var(--navy);color:white;border-color:var(--navy);}
+.fi{padding:9px 10px;border:1px solid var(--gray-200);border-radius:8px;background:white;}
+.bt{padding:8px 13px;border-radius:8px;border:1px solid var(--gray-200);background:white;font-size:13px;color:var(--navy);}
+.bt.pri{background:var(--navy);color:white;border-color:var(--navy);} .bt.dan{color:#B91C1C;border-color:#FECACA;}
+table.reg{width:100%;border-collapse:collapse;font-size:13px;}
+table.reg th{text-align:left;font-size:11px;color:var(--gray-400);font-weight:600;padding:6px 4px;border-bottom:1px solid var(--gray-200);}
+table.reg td{padding:7px 4px;border-bottom:1px solid var(--gray-100);vertical-align:top;}
+.tag{display:inline-block;font-size:10px;border-radius:6px;padding:1px 6px;margin-left:4px;}
+.tag.c{background:#E0E7FF;color:#3730A3;} .tag.a{background:#FEE2E2;color:#991B1B;} .tag.w{background:#FEF3C7;color:#92400E;} .tag.s{background:#E5E7EB;color:#374151;}
+.anulado{text-decoration:line-through;color:var(--gray-400);}
+.worker{display:flex;align-items:center;justify-content:space-between;padding:14px;border:1px solid var(--gray-200);border-radius:12px;margin-bottom:8px;background:white;font-size:15px;}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:14px auto 0;}
+.pinpad button{padding:18px;font-size:22px;border-radius:12px;border:1px solid var(--gray-200);background:white;}
+.pindots{text-align:center;font-size:28px;letter-spacing:10px;color:var(--navy);min-height:40px;}
+.modal{position:fixed;inset:0;background:rgba(10,37,64,0.45);display:none;align-items:flex-end;justify-content:center;z-index:500;}
+.modal .mb{background:white;border-radius:16px 16px 0 0;width:100%;max-width:560px;padding:18px;max-height:92vh;overflow:auto;}
+@media(min-width:700px){.modal{align-items:center;}.modal .mb{border-radius:16px;}}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--gray-800);color:white;padding:12px 18px;border-radius:10px;font-size:14px;display:none;z-index:2000;max-width:90%;text-align:center;}
+@media print{header,.noprint,.tabs{display:none!important;} body{background:white;} .card{box-shadow:none;padding:0;} main{max-width:none;padding:0;}}
+#informe{display:none;}
+@media print{#informe{display:block;} #app{display:none!important;}}
+.inf-h{font-size:12px;margin-bottom:8px;} .inf-t{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:6px;}
+.inf-t th,.inf-t td{border:1px solid #999;padding:3px 4px;text-align:left;} .inf-pag{page-break-after:always;padding:8mm 4mm;}
+.inf-firma{display:flex;gap:40px;margin-top:22px;font-size:11px;} .inf-firma div{flex:1;border-top:1px solid #333;padding-top:4px;}
+</style>
+</head>
+<body>
+
+<!-- ENTRAR -->
+<div id="login" class="scr">
+  <div style="text-align:center;color:white;"><div style="font-size:22px;font-weight:600;">⏱ Registro horario</div><div style="color:var(--gray-400);font-size:13px;margin-top:4px;">Durespin · Asesoría fiscal y laboral</div></div>
+  <form class="lg-box" id="lgForm" onsubmit="entrar();return false;" autocomplete="on">
+    <label for="lgU">Usuario</label>
+    <input id="lgU" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="lgP">Contraseña</label>
+    <input id="lgP" name="password" type="password" autocomplete="current-password" required>
+    <button class="b-main" type="submit" id="lgBtn">Entrar</button>
+    <div class="err" id="lgErr"></div>
+  </form>
+</div>
+
+<!-- BLOQUEO CON HUELLA -->
+<div id="lock" class="scr">
+  <div style="font-size:40px;">👆</div>
+  <div style="color:white;font-size:16px;text-align:center;">Desbloquea con tu huella o tu cara</div>
+  <button class="b-sec" style="width:100%;max-width:300px;" onclick="desbloquear()">👆 Desbloquear</button>
+  <button style="background:none;border:none;color:#CBD5E1;font-size:13px;text-decoration:underline;" onclick="salirYEntrarConClave()">Entrar con usuario y contraseña</button>
+  <div class="err" id="lockErr"></div>
+</div>
+
+<div id="app" class="scr">
+  <header><div><div class="h-t" id="hTit">Registro horario</div><div class="h-s" id="hSub">Durespin</div></div>
+    <button class="h-out" onclick="salir()">Salir</button></header>
+  <main id="main"></main>
+</div>
+
+<!-- Ventana para correcciones, horario, etc. -->
+<div class="modal" id="modal" onclick="if(event.target===this)cerrarModal()"><div class="mb" id="modalB"></div></div>
+<div id="toast"></div>
+<div id="informe"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, addDoc, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyCVK3yF15Udps1l046kv6M1TASIwVEPcVs", authDomain: "duraspinvest.firebaseapp.com", projectId: "duraspinvest",
+  storageBucket: "duraspinvest-docs-eu", messagingSenderId: "280764832749", appId: "1:280764832749:web:a1fa6c44cf59518541a5e4"
+});
+const db = getFirestore(app), auth = getAuth(app);
+const ADMIN_UID = "hsQ7si0hINTgb1zXlDa2QPdkEFB2";
+const URL_COMPARTIDO = "https://fichajecompartido-gyc3opqqlq-ew.a.run.app";
+window._F = { db, auth };
+
+// ---------- utilidades ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const js = (v) => esc(JSON.stringify(String(v == null ? "" : v)));
+const TZ = "Europe/Madrid";
+const hhmm = (t) => new Date(t).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+const diaDe = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: TZ });                 // AAAA-MM-DD en hora de Madrid
+const fDia = (d) => { const [y, m, dd] = d.split("-"); return new Date(Date.UTC(+y, +m - 1, +dd, 12)).toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "UTC" }); };
+const dur = (ms) => { const m = Math.round(ms / 60000); return Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0"); };
+const mesUTC = (d = new Date()) => d.toISOString().slice(0, 7);
+const mesSig = (m, n) => { const [y, mm] = m.split("-").map(Number); const d = new Date(Date.UTC(y, mm - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+const mesMadrid = () => new Date().toLocaleDateString("sv-SE", { timeZone: TZ }).slice(0, 7);
+const nomMes = (m) => { const [y, mm] = m.split("-").map(Number); return new Date(Date.UTC(y, mm - 1, 15)).toLocaleDateString("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }); };
+const tsMs = (v) => v == null ? null : typeof v === "string" ? Date.parse(v) : v.toMillis ? v.toMillis() : v.seconds != null ? v.seconds * 1000 : null;
+function toast(t, ms = 3000) { const e = $("toast"); e.textContent = t; e.style.display = "block"; clearTimeout(toast._t); toast._t = setTimeout(() => (e.style.display = "none"), ms); }
+function pantalla(id) { ["login", "lock", "app"].forEach((k) => ($(k).style.display = k === id ? "flex" : "none")); if (id === "app") $("app").style.display = "block"; }
+window.cerrarModal = () => { $("modal").style.display = "none"; };
+function modal(html) { $("modalB").innerHTML = html; $("modal").style.display = "flex"; }
+const TXT = { entrada: "Entrada", pausa: "Inicio de pausa", reanuda: "Fin de pausa", salida: "Salida" };
+const BOT = { entrada: "▶ Entrada", pausa: "⏸ Pausa", reanuda: "▶ Volver de la pausa", salida: "■ Salida" };
+const PERMITIDO = { fuera: ["entrada"], dentro: ["pausa", "salida"], pausa: ["reanuda", "salida"] };
+const EST = { fuera: "Fuera de la jornada", dentro: "Trabajando", pausa: "En pausa" };
+
+// ---------- cálculo: de los fichajes (con correcciones) a jornadas ----------
+// Devuelve { ev: eventos válidos ordenados, anulados: Set, corr: correcciones, estado, desde }
+function eventos(L, uid) {
+  const corr = L.filter((f) => f.tipo === "correccion" && f.uid === uid);
+  const anulados = new Set(corr.filter((c) => c.accion === "anular").map((c) => c.refId));
+  const ev = [];
+  L.filter((f) => f.uid === uid).forEach((f) => {
+    if (f.tipo === "correccion") { if (f.accion === "anadir") ev.push({ id: f.id, tipo: f.fichajeTipo, t: Date.parse(f.hora), corregido: true, motivo: f.motivo, autor: f.autorNombre, anulado: anulados.has(f.id) }); return; }
+    const t = tsMs(f.ts); if (t == null) return;
+    ev.push({ id: f.id, tipo: f.tipo, t, origen: f.origen, metodo: f.metodo, disp: f.dispositivoNombre, anulado: anulados.has(f.id) });
+  });
+  ev.sort((a, b) => a.t - b.t);
+  const val = ev.filter((e) => !e.anulado);
+  const u = val[val.length - 1];
+  const estado = !u || u.tipo === "salida" ? "fuera" : u.tipo === "pausa" ? "pausa" : "dentro";
+  return { ev, val, corr, anulados, estado, desde: u ? u.t : null };
+}
+// Jornadas: cada una empieza en una entrada y se asigna al día (hora de Madrid) de esa entrada
+function jornadas(val) {
+  const J = []; let j = null, ini = null;
+  const cierra = (t) => { if (ini != null) { j.trab += t - ini; ini = null; } };
+  for (const e of val) {
+    if (e.tipo === "entrada") {
+      if (j) { j.avisos.push("Entrada sin salida"); J.push(j); }
+      j = { dia: diaDe(e.t), ini: e.t, fin: null, trab: 0, pausa: 0, avisos: [], ev: [e] }; ini = e.t; continue;
+    }
+    if (!j) { J.push({ dia: diaDe(e.t), ini: null, fin: e.t, trab: 0, pausa: 0, avisos: [TXT[e.tipo] + " sin entrada"], ev: [e] }); continue; }
+    j.ev.push(e);
+    if (e.tipo === "pausa") { if (ini == null) j.avisos.push("Pausa repetida"); else { cierra(e.t); j._p = e.t; } }
+    else if (e.tipo === "reanuda") { if (ini != null) j.avisos.push("Vuelta de pausa sin pausa"); else { if (j._p) j.pausa += e.t - j._p; j._p = null; ini = e.t; } }
+    else if (e.tipo === "salida") { if (j._p) { j.pausa += e.t - j._p; j._p = null; } cierra(e.t); j.fin = e.t; J.push(j); j = null; }
+  }
+  if (j) { j.abierta = true; J.push(j); }
+  J.forEach((x) => { if (x.fin && x.fin - x.ini > 16 * 3600000) x.avisos.push("Jornada de más de 16 h"); });
+  return J;
+}
+function previstas(h, dia) {
+  if (!h || !h.dias) return 0;
+  const [y, m, d] = dia.split("-").map(Number); const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay() || 7;
+  if (!h.dias.includes(wd)) return 0;
+  const min = (a) => { const [hh, mm] = a.split(":").map(Number); return hh * 60 + mm; };
+  let t = 0; if (h.desde && h.hasta) t += min(h.hasta) - min(h.desde); if (h.desde2 && h.hasta2) t += min(h.hasta2) - min(h.desde2);
+  return Math.max(0, t) * 60000;
+}
+const horarioTxt = (h) => { if (!h || !h.dias || !h.dias.length) return "Sin horario"; const D = ["", "L", "M", "X", "J", "V", "S", "D"];
+  return h.dias.map((d) => D[d]).join("") + " · " + [h.desde && h.hasta ? h.desde + "–" + h.hasta : "", h.desde2 && h.hasta2 ? h.desde2 + "–" + h.hasta2 : ""].filter(Boolean).join(" y ") + (h.nota ? " · " + h.nota : ""); };
+window._calc = { eventos, jornadas, previstas };
+
+// ---------- huella (WebAuthn del propio móvil; la sesión queda abierta y la huella la desbloquea) ----------
+const hk = (uid) => "fichaje_huella_" + uid, hn = (uid) => "fichaje_huella_no_" + uid;
+const huellaActiva = (uid) => { try { return !!localStorage.getItem(hk(uid)); } catch (e) { return false; } };
+async function huellaDisponible() { try { return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; } }
+window.activarHuella = async function () {
+  const u = auth.currentUser; if (!u) return;
+  try {
+    const cred = await navigator.credentials.create({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: "Durespin · Fichaje", id: location.hostname }, user: { id: new TextEncoder().encode("fichaje-" + u.uid), name: u.email.split("@")[0], displayName: "Fichaje Durespin" },
+      pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" }, timeout: 60000 } });
+    localStorage.setItem(hk(u.uid), btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+    sessionStorage.setItem("fichaje_desbloqueado", u.uid); sessionStorage.setItem("fichaje_metodo", "huella");
+    toast("Huella activada"); pintar();
+  } catch (e) { console.warn(e); alert("No se ha podido activar. Comprueba que el móvil tiene la huella o la cara configurada."); }
+};
+window.desbloquear = async function () {
+  const u = auth.currentUser; if (!u) return pantalla("login");
+  $("lockErr").style.display = "none";
+  try {
+    const id = Uint8Array.from(atob(localStorage.getItem(hk(u.uid)) || ""), (c) => c.charCodeAt(0));
+    await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rpId: location.hostname, allowCredentials: [{ type: "public-key", id }], userVerification: "required", timeout: 60000 } });
+    sessionStorage.setItem("fichaje_desbloqueado", u.uid); sessionStorage.setItem("fichaje_metodo", "huella");
+    iniciar(u);
+  } catch (e) { $("lockErr").textContent = "No se ha reconocido. Vuelve a intentarlo o entra con tu contraseña."; $("lockErr").style.display = "block"; }
+};
+window.salirYEntrarConClave = () => { sessionStorage.clear(); signOut(auth); };
+window.quitarHuella = () => { const u = auth.currentUser; if (u) localStorage.removeItem(hk(u.uid)); toast("Huella desactivada en este móvil"); pintar(); };
+window.ahoraNoHuella = () => { const u = auth.currentUser; if (u) localStorage.setItem(hn(u.uid), "1"); pintar(); };
+
+// ---------- entrar / salir ----------
+window.entrar = async function () {
+  const u = $("lgU").value.trim(), p = $("lgP").value; $("lgErr").style.display = "none"; $("lgBtn").disabled = true;
+  // Sin @: primero como trabajador, luego como usuario del portal (el encargado entra con su usuario del portal)
+  const emails = u.includes("@") ? [u] : [u.toLowerCase() + "@fichaje.durespin", u.toLowerCase() + "@portal.facturas"];
+  let ok = false, ult;
+  for (const e of emails) { try { await signInWithEmailAndPassword(auth, e, p); ok = true; break; } catch (er) { ult = er; } }
+  $("lgBtn").disabled = false;
+  if (!ok) { console.warn(ult); $("lgErr").textContent = "Usuario o contraseña incorrectos."; $("lgErr").style.display = "block"; return; }
+  sessionStorage.setItem("fichaje_metodo", "clave");
+};
+window.salir = async () => { if (!confirm("¿Cerrar la sesión en este móvil?")) return; sessionStorage.clear(); await signOut(auth); };
+
+const S = { yo: null, rol: null, subs: [], L: [], T: [], cid: null, mes: mesMadrid(), tab: "fichar", vista: "" };
+window._S = S;
+function limpiaSubs() { S.subs.forEach((f) => f()); S.subs = []; }
+
+onAuthStateChanged(auth, (u) => {
+  limpiaSubs(); S.yo = null; S.rol = null; S.L = []; S.T = [];
+  if (!u) { pantalla("login"); return; }
+  if (huellaActiva(u.uid) && sessionStorage.getItem("fichaje_desbloqueado") !== u.uid) { pantalla("lock"); setTimeout(() => window.desbloquear(), 300); return; }
+  iniciar(u);
+});
+
+async function iniciar(u) {
+  pantalla("app"); $("main").innerHTML = "<div class='muted' style='padding:30px;text-align:center;'>Cargando…</div>";
+  try {
+    if (u.uid === ADMIN_UID) { S.rol = "despacho"; S.yo = { nombre: "Despacho" }; return arrancaGestor(); }
+    if (/@fichaje\.durespin$/i.test(u.email || "")) {
+      const d = await getDoc(doc(db, "fichaje_trabajadores", u.uid));
+      if (!d.exists() || d.data().activo === false) return sinAcceso("Tu acceso al registro horario no está activo. Habla con tu empresa.");
+      S.rol = "trabajador"; S.yo = d.data(); return arrancaTrabajador();
+    }
+    const p = await getDoc(doc(db, "portal_usuarios", u.uid));
+    if (p.exists() && p.data().activo !== false && p.data().permisos && p.data().permisos.fichajes === true) { S.rol = "gestor"; S.yo = p.data(); S.cid = S.yo.clienteId; return arrancaGestor(); }
+    sinAcceso("Este usuario no tiene permiso para el registro horario.");
+  } catch (e) { console.error(e); sinAcceso("No se ha podido cargar: " + esc(e.message)); }
+}
+function sinAcceso(t) { $("hTit").textContent = "Registro horario"; $("main").innerHTML = "<div class='card' style='text-align:center;'>" + t + "</div>"; }
+
+// =================== TRABAJADOR ===================
+function arrancaTrabajador() {
+  $("hTit").textContent = S.yo.nombre; $("hSub").textContent = S.yo.clienteNombre || "";
+  escuchaMeses({ campo: "uid", valor: auth.currentUser.uid });
+  clearInterval(S._reloj); S._reloj = setInterval(() => { const r = $("reloj"); if (r) r.textContent = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: TZ }); const t = $("tiempo"); if (t && S._desde) t.textContent = dur(Date.now() - S._desde); }, 1000);
+}
+// Escucha los fichajes del mes elegido y del anterior/siguiente (para jornadas que cruzan de mes)
+function escuchaMeses({ campo, valor }) {
+  limpiaSubs();
+  const meses = [mesSig(S.mes, -1), S.mes, mesSig(S.mes, 1)];
+  const parte = {};
+  meses.forEach((m) => S.subs.push(onSnapshot(query(collection(db, "fichajes"), where(campo, "==", valor), where("mes", "==", m)), (s) => {
+    parte[m] = s.docs.map((d) => ({ ...d.data({ serverTimestamps: "estimate" }), id: d.id }));
+    S.L = Object.values(parte).flat(); pintar();
+  }, (e) => { console.warn("fichajes", e.message); toast("Sin conexión con el servidor"); })));
+  if (S.rol !== "trabajador") {
+    const cond = S.rol === "gestor" || S.cid ? [where("clienteId", "==", S.cid)] : [];
+    if (cond.length) S.subs.push(onSnapshot(query(collection(db, "fichaje_trabajadores"), ...cond), (s) => { S.T = s.docs.map((d) => ({ ...d.data(), uid: d.id })).sort((a, b) => a.nombre.localeCompare(b.nombre)); pintar(); }));
+  }
+}
+
+window.pintar = pintar;
+async function pintar() {
+  if (S.rol === "trabajador") return pintaTrabajador();
+  if (S.rol === "gestor" || S.rol === "despacho") return pintaGestor();
+}
+async function pintaTrabajador() {
+  const uid = auth.currentUser.uid, E = eventos(S.L, uid);
+  S._desde = E.estado === "fuera" ? null : E.desde;
+  const hoy = diaDe(Date.now()), hoyEv = E.val.filter((e) => diaDe(e.t) === hoy);
+  const J = jornadas(E.val).filter((j) => j.dia.startsWith(S.mes));
+  const total = J.reduce((s, j) => s + j.trab, 0);
+  let aviso = "";
+  if (await huellaDisponible()) {
+    if (huellaActiva(uid)) aviso = "<div class='muted' style='text-align:right;margin:-6px 2px 8px;'>👆 Huella activada · <a href='#' onclick='quitarHuella();return false;' style='color:inherit;'>desactivar</a></div>";
+    else if (!localStorage.getItem(hn(uid))) aviso = "<div class='card' style='display:flex;gap:10px;align-items:center;flex-wrap:wrap;'><div style='flex:1;min-width:180px;font-size:13px;'><b>Ficha con tu huella o tu cara</b><br><span class='muted'>Así no tendrás que poner la contraseña cada vez.</span></div><button class='bt pri' onclick='activarHuella()'>Activar</button><button class='bt' onclick='ahoraNoHuella()'>Ahora no</button></div>";
+  }
+  $("main").innerHTML = aviso +
+    "<div class='card estado'><div class='reloj' id='reloj'>" + hhmm(Date.now()) + "</div><div class='fecha'>" + new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", timeZone: TZ }) + "</div>" +
+    "<div class='pill " + E.estado + "'>" + EST[E.estado] + (E.estado !== "fuera" ? " · desde " + hhmm(E.desde) + " (<span id='tiempo'>" + dur(Date.now() - E.desde) + "</span>)" : "") + "</div>" +
+    "<div class='botones'>" + PERMITIDO[E.estado].map((t) => "<button class='bf " + t + "' onclick=\"fichar('" + t + "',this)\">" + BOT[t] + "</button>").join("") + "</div>" +
+    "<div class='muted' style='margin-top:10px;'>La hora la pone el servidor, no el móvil.</div></div>" +
+    "<div class='card'><div style='font-weight:600;color:var(--navy);margin-bottom:6px;'>Hoy</div><div class='lst'>" +
+    (hoyEv.length ? hoyEv.map((e) => "<div class='it'><span>" + TXT[e.tipo] + (e.corregido ? "<span class='tag c'>corregido</span>" : "") + (e.origen === "compartido" ? "<span class='tag s'>móvil empresa</span>" : "") + "</span><b>" + hhmm(e.t) + "</b></div>").join("") : "<div class='muted'>Aún no has fichado hoy.</div>") + "</div></div>" +
+    "<div class='card'><div style='display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;'><div style='font-weight:600;color:var(--navy);'>Mis registros</div>" + selMes() + "</div>" +
+    "<div class='muted' style='margin:6px 0;'>Horario: " + esc(horarioTxt(S.yo.horario)) + " · Total del mes: <b>" + dur(total) + " h</b></div>" + tablaDias(J, S.yo.horario, false) +
+    "<div class='muted' style='margin-top:10px;'>¿Te has equivocado o se te olvidó fichar? Díselo a tu encargado: lo corrige y queda anotado quién y por qué.</div></div>";
+}
+function selMes() {
+  const opts = []; for (let i = 0; i < 13; i++) { const m = mesSig(mesMadrid(), -i); opts.push("<option value='" + m + "'" + (m === S.mes ? " selected" : "") + ">" + nomMes(m) + "</option>"); }
+  return "<select class='fi' onchange='cambiaMes(this.value)'>" + opts.join("") + "</select>";
+}
+window.cambiaMes = (m) => { S.mes = m; if (S.rol === "trabajador") escuchaMeses({ campo: "uid", valor: auth.currentUser.uid }); else if (S.cid) escuchaMeses({ campo: "clienteId", valor: S.cid }); };
+function tablaDias(J, h, gestion, uid) {
+  if (!J.length) return "<div class='muted' style='padding:8px 0;'>Sin fichajes este mes.</div>";
+  return "<table class='reg'><tr><th>Día</th><th>Fichajes</th><th>Horas</th><th>Previstas</th></tr>" + J.map((j) => {
+    const prev = previstas(h, j.dia);
+    const evs = j.ev.map((e) => "<span style='white-space:nowrap;'" + (gestion ? " title='" + esc(TXT[e.tipo] + (e.corregido ? " · corregido por " + (e.autor || "") + ": " + (e.motivo || "") : "") + (e.disp ? " · móvil de " + e.disp : "")) + "'" : "") + ">" +
+      ({ entrada: "▶", pausa: "⏸", reanuda: "▶", salida: "■" })[e.tipo] + " " + hhmm(e.t) + (e.corregido ? "<span class='tag c'>c</span>" : "") +
+      (gestion ? " <a href='#' class='noprint' style='color:#B91C1C;font-size:11px;' onclick=\"anular(" + js(uid) + "," + js(e.id) + "," + js(e.tipo) + "," + e.t + ");return false;\">✕</a>" : "") + "</span>").join(" · ");
+    const anul = gestion && S._anul ? (S._anul[uid] || []).filter((e) => diaDe(e.t) === j.dia) : [];
+    const anTxt = anul.length ? "<br><span class='muted'>Anulados: </span>" + anul.map((e) => "<span class='anulado'>" + hhmm(e.t) + " " + TXT[e.tipo] + "</span>").join(", ") : "";
+    return "<tr><td>" + fDia(j.dia) + "</td><td>" + evs + (j.avisos.length ? "<br>" + j.avisos.map((a) => "<span class='tag w'>" + esc(a) + "</span>").join("") : "") + (j.abierta ? "<span class='tag w'>en curso / sin salida</span>" : "") +
+      anTxt + "</td><td><b>" + dur(j.trab) + "</b>" + (j.pausa ? "<div class='muted'>pausa " + dur(j.pausa) + "</div>" : "") + "</td><td>" + (prev ? dur(prev) : "–") + "</td></tr>";
+  }).join("") + "</table>";
+}
+window.fichar = async function (tipo, btn) {
+  const E = eventos(S.L, auth.currentUser.uid);
+  if (!PERMITIDO[E.estado].includes(tipo)) { toast("Ese fichaje no toca ahora."); return; }
+  if (tipo === "salida" && !confirm("¿Fichar la SALIDA ahora?")) return;
+  document.querySelectorAll(".bf").forEach((b) => (b.disabled = true));
+  const m = sessionStorage.getItem("fichaje_metodo") === "huella" ? "huella" : "clave";
+  const datos = (mes) => ({ clienteId: S.yo.clienteId, uid: auth.currentUser.uid, nombre: S.yo.nombre, tipo, ts: serverTimestamp(), mes, origen: "propio", metodo: m });
+  try {
+    try { await addDoc(collection(db, "fichajes"), datos(mesUTC())); }
+    catch (e) { if (e.code !== "permission-denied") throw e; await addDoc(collection(db, "fichajes"), datos(mesSig(mesUTC(), 1))); }   // cambio de mes con el reloj del móvil desajustado
+    toast("✓ " + TXT[tipo] + " registrada", 3500);
+  } catch (e) { console.error(e); alert("No se ha podido fichar (" + (e.code || e.message) + "). Comprueba la conexión e inténtalo otra vez."); }
+  finally { document.querySelectorAll(".bf").forEach((b) => (b.disabled = false)); }
+};
+
+// =================== ENCARGADO (gestor del cliente) y DESPACHO ===================
+async function arrancaGestor() {
+  $("hTit").textContent = "Registro horario";
+  if (S.rol === "despacho") {
+    const q = new URLSearchParams(location.search).get("c");
+    if (q) S.cid = q;
+    if (!S.cid) { const s = await getDocs(collection(db, "fichaje_trabajadores")); const cl = {}; s.forEach((d) => (cl[d.data().clienteId] = d.data().clienteNombre));
+      S._clientes = Object.entries(cl).sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+      if (S._clientes.length === 1) S.cid = S._clientes[0][0]; }
+  }
+  $("hSub").textContent = S.rol === "gestor" ? (S.yo.clienteNombre || "") + " · " + (S.yo.nombre || "") : "Despacho";
+  if (S.cid) escuchaMeses({ campo: "clienteId", valor: S.cid }); else pintar();
+}
+window.elegirCliente = (cid) => { S.cid = cid; escuchaMeses({ campo: "clienteId", valor: cid }); };
+window.verTab = (t) => { S.tab = t; S.vista = ""; pintar(); };
+function pintaGestor() {
+  if (S.rol === "despacho" && !S.cid) {
+    $("main").innerHTML = "<div class='card'><div style='font-weight:600;color:var(--navy);margin-bottom:8px;'>Elige la empresa</div>" +
+      ((S._clientes || []).map(([id, n]) => "<div class='worker' onclick='elegirCliente(" + js(id) + ")'>" + esc(n || id) + "<span>›</span></div>").join("") || "<div class='muted'>Ninguna empresa tiene aún trabajadores con acceso.</div>") + "</div>";
+    return;
+  }
+  const nombreCli = (S.T[0] || {}).clienteNombre || (S.yo && S.yo.clienteNombre) || "";
+  if (S.rol === "despacho") $("hSub").textContent = nombreCli + " · Despacho";
+  const tabs = [["fichar", "⏱ Fichar en este móvil"], ["registros", "📋 Registros"]];
+  if (S.tab === "fichar" && S.vista.startsWith("pin:")) return pintaPin();
+  $("main").innerHTML = "<div class='tabs noprint'>" + tabs.map(([k, l]) => "<button class='tab" + (S.tab === k ? " sel" : "") + "' onclick=\"verTab('" + k + "')\">" + l + "</button>").join("") +
+    (S.rol === "despacho" && (S._clientes || []).length > 1 ? "<button class='tab' onclick='S_otra()'>⇄ Otra empresa</button>" : "") + "</div><div id='cuerpo'></div>";
+  if (S.tab === "fichar") pintaCompartido(); else pintaRegistros();
+}
+window.S_otra = () => { S.cid = null; limpiaSubs(); pintar(); };
+
+// --- Fichar desde el móvil de la empresa (PIN) ---
+function pintaCompartido() {
+  const A = S.T.filter((t) => t.activo !== false);
+  $("cuerpo").innerHTML = "<div class='card'><div style='font-weight:600;color:var(--navy);'>¿Quién ficha?</div><div class='muted' style='margin:4px 0 12px;'>Para quien no tiene móvil: toca tu nombre y pon tu PIN personal.</div>" +
+    (A.length ? A.map((t) => { const E = eventos(S.L, t.uid); return "<div class='worker' onclick='abrePin(" + js(t.uid) + ")'><div>" + esc(t.nombre) + "<div class='muted'>" + EST[E.estado] + (E.estado !== "fuera" ? " desde " + hhmm(E.desde) : "") + "</div></div><span class='pill " + E.estado + "' style='margin:0;'>" + ({ fuera: "Fuera", dentro: "Dentro", pausa: "Pausa" })[E.estado] + "</span></div>"; }).join("")
+      : "<div class='muted'>No hay trabajadores con acceso. Los da de alta tu asesor.</div>") + "</div>";
+}
+window.abrePin = (uid) => { S.vista = "pin:" + uid; S._pin = ""; S._pinEst = null; pintar(); };
+function pintaPin() {
+  const uid = S.vista.slice(4), t = S.T.find((x) => x.uid === uid) || {};
+  const est = S._pinEst;
+  $("main").innerHTML = "<div class='card' style='text-align:center;'><div style='font-size:18px;font-weight:600;color:var(--navy);'>" + esc(t.nombre) + "</div>" +
+    (!est ? "<div class='muted' style='margin-top:4px;'>Pon tu PIN de 6 números</div><div class='pindots'>" + "●".repeat(S._pin.length) + "○".repeat(6 - S._pin.length) + "</div>" +
+      "<div class='pinpad'>" + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => "<button onclick='pinTecla(" + n + ")'>" + n + "</button>").join("") + "<button onclick='pinTecla(\"x\")'>⌫</button><button onclick='pinTecla(0)'>0</button><button onclick='pinOk()' style='background:var(--navy);color:white;'>OK</button></div>"
+      : "<div class='pill " + est + "'>" + EST[est] + "</div><div class='botones'>" + PERMITIDO[est].map((tp) => "<button class='bf " + tp + "' onclick=\"ficharPin('" + tp + "',this)\">" + BOT[tp] + "</button>").join("") + "</div>") +
+    "<button class='bt' style='margin-top:16px;' onclick='verTab(\"fichar\")'>Cancelar</button><div class='err' id='pinErr' style='color:#B91C1C;margin-top:10px;'></div></div>";
+}
+window.pinTecla = (n) => { if (n === "x") S._pin = S._pin.slice(0, -1); else if (S._pin.length < 6) S._pin += n; pintaPin(); if (S._pin.length === 6) pinOk(); };
+async function llamaCompartido(datos) {
+  const r = await fetch(URL_COMPARTIDO, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + await auth.currentUser.getIdToken() }, body: JSON.stringify(datos) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "HTTP " + r.status); return j;
+}
+window.pinOk = async () => {
+  const uid = S.vista.slice(4);
+  try { const j = await llamaCompartido({ accion: "estado", uid, pin: S._pin }); S._pinEst = j.estado; pintaPin(); }
+  catch (e) { S._pin = ""; pintaPin(); const er = $("pinErr"); er.textContent = e.message; er.style.display = "block"; }
+};
+window.ficharPin = async (tipo, btn) => {
+  const uid = S.vista.slice(4);
+  document.querySelectorAll(".bf").forEach((b) => (b.disabled = true));
+  try { const j = await llamaCompartido({ uid, pin: S._pin, tipo }); toast("✓ " + j.nombre + ": " + TXT[tipo] + " a las " + hhmm(Date.parse(j.hora)), 4000); S._pin = ""; verTab("fichar"); }
+  catch (e) { const er = $("pinErr"); er.textContent = e.message; er.style.display = "block"; document.querySelectorAll(".bf").forEach((b) => (b.disabled = false)); }
+};
+
+// --- Registros, correcciones e informe ---
+function pintaRegistros() {
+  const sel = S._trab || "";
+  const lista = S.T.filter((t) => !sel || t.uid === sel);
+  let html = "<div class='card noprint'><div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;'>" + selMes() +
+    "<select class='fi' onchange='S_trab(this.value)'><option value=''>Todos los trabajadores</option>" + S.T.map((t) => "<option value='" + esc(t.uid) + "'" + (t.uid === sel ? " selected" : "") + ">" + esc(t.nombre) + (t.activo === false ? " (baja)" : "") + "</option>").join("") + "</select>" +
+    "<button class='bt pri' onclick='informe()'>🖨 Informe del mes (PDF)</button><button class='bt' onclick='csv()'>⬇ Excel (CSV)</button></div>" +
+    "<div class='muted' style='margin-top:8px;'>Los fichajes no se pueden modificar ni borrar. Si hay un error: ✕ para anular uno (queda tachado) o «+ Añadir fichaje» si se olvidó. Siempre con motivo.</div></div>";
+  S._anul = {};
+  html += lista.map((t) => {
+    const E = eventos(S.L, t.uid), J = jornadas(E.val).filter((j) => j.dia.startsWith(S.mes));
+    S._anul[t.uid] = E.ev.filter((e) => e.anulado);
+    const total = J.reduce((s, j) => s + j.trab, 0), prev = J.reduce((s, j) => s + previstas(t.horario, j.dia), 0);
+    const anuladosMes = E.ev.filter((e) => e.anulado && diaDe(e.t).startsWith(S.mes));
+    const corrMes = E.corr.filter((c) => (c.hora ? diaDe(Date.parse(c.hora)) : "").startsWith(S.mes) || (c.accion === "anular" && anuladosMes.some((a) => a.id === c.refId)));
+    return "<div class='card'><div style='display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;'><div><b style='color:var(--navy);'>" + esc(t.nombre) + "</b>" + (t.activo === false ? "<span class='tag a'>baja</span>" : "") +
+      "<div class='muted'>" + esc(horarioTxt(t.horario)) + " · " + (t.dispositivo === "compartido" ? "ficha en el móvil de la empresa" : "ficha en su móvil") + "</div></div>" +
+      "<div style='text-align:right;'><div style='font-size:18px;font-weight:600;color:var(--navy);'>" + dur(total) + " h</div><div class='muted'>previstas " + dur(prev) + "</div></div></div>" +
+      "<div style='margin-top:8px;overflow-x:auto;'>" + tablaDias(J, t.horario, true, t.uid) + "</div>" +
+      (anuladosMes.length || corrMes.length ? "<details style='margin-top:8px;font-size:12px;'><summary class='muted'>Correcciones del mes (" + corrMes.length + ")</summary>" +
+        corrMes.map((c) => { const tsc = tsMs(c.ts); const ref = c.accion === "anular" ? E.ev.find((e) => e.id === c.refId) : null;
+          return "<div style='padding:4px 0;border-bottom:1px solid var(--gray-100);'>" + (c.accion === "anadir" ? "➕ Añadido: " + TXT[c.fichajeTipo] + " " + fDia(diaDe(Date.parse(c.hora))) + " " + hhmm(Date.parse(c.hora)) : "✕ Anulado: " + (ref ? TXT[ref.tipo] + " " + fDia(diaDe(ref.t)) + " " + hhmm(ref.t) : "fichaje")) +
+            "<br><span class='muted'>Motivo: " + esc(c.motivo) + " · " + esc(c.autorNombre || "") + (tsc ? " · " + new Date(tsc).toLocaleString("es-ES", { timeZone: TZ }) : "") + "</span></div>"; }).join("") + "</details>" : "") +
+      "<div class='noprint' style='margin-top:10px;'><button class='bt' onclick='nuevoFichaje(" + js(t.uid) + ")'>+ Añadir fichaje olvidado</button></div></div>";
+  }).join("") || "<div class='card muted'>No hay trabajadores con acceso.</div>";
+  $("cuerpo").innerHTML = html;
+}
+window.S_trab = (v) => { S._trab = v; pintar(); };
+async function guardaCorreccion(c) {
+  const quien = S.rol === "despacho" ? "Despacho (Durespin)" : (S.yo.nombre || auth.currentUser.email);
+  const t = S.T.find((x) => x.uid === c.uid) || {};
+  await addDoc(collection(db, "fichajes"), { clienteId: S.cid, uid: c.uid, nombre: t.nombre || "", tipo: "correccion", accion: c.accion, fichajeTipo: c.fichajeTipo || "", hora: c.hora || "", refId: c.refId || "",
+    motivo: c.motivo, autorUid: auth.currentUser.uid, autorNombre: quien, ts: serverTimestamp(), mes: c.mes });
+}
+window.anular = (uid, id, tipo, t) => {
+  modal("<div style='font-weight:600;color:var(--navy);font-size:16px;'>Anular fichaje</div><div style='margin:6px 0 12px;font-size:14px;'>" + TXT[tipo] + " del " + fDia(diaDe(t)) + " a las " + hhmm(t) + "</div>" +
+    "<div class='muted'>No se borra: queda tachado, con el motivo, quién lo anula y cuándo.</div><textarea id='mot' class='fi' style='width:100%;margin-top:10px;' rows='3' placeholder='Motivo (obligatorio): p. ej. fichó dos veces la entrada'></textarea>" +
+    "<div style='display:flex;gap:8px;margin-top:12px;justify-content:flex-end;'><button class='bt' onclick='cerrarModal()'>Cancelar</button><button class='bt dan' onclick='confAnular(" + js(uid) + "," + js(id) + "," + t + ")'>Anular</button></div>");
+};
+window.confAnular = async (uid, id, t) => {
+  const motivo = $("mot").value.trim(); if (motivo.length < 5) { alert("Escribe el motivo."); return; }
+  try { await guardaCorreccion({ uid, accion: "anular", refId: id, motivo, mes: mesUTC(new Date(t)) }); cerrarModal(); toast("Fichaje anulado (queda en el registro)"); }
+  catch (e) { alert("No se ha podido guardar: " + (e.code || e.message)); }
+};
+window.nuevoFichaje = (uid) => {
+  const t = S.T.find((x) => x.uid === uid) || {}, hoy = diaDe(Date.now());
+  modal("<div style='font-weight:600;color:var(--navy);font-size:16px;'>Añadir fichaje olvidado</div><div style='margin:4px 0 10px;font-size:14px;'>" + esc(t.nombre) + "</div>" +
+    "<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;'><select id='nfT' class='fi'>" + Object.entries(TXT).map(([k, l]) => "<option value='" + k + "'>" + l + "</option>").join("") + "</select>" +
+    "<input id='nfD' type='date' class='fi' value='" + hoy + "' max='" + hoy + "'><input id='nfH' type='time' class='fi' value='09:00'></div>" +
+    "<textarea id='mot' class='fi' style='width:100%;margin-top:10px;' rows='3' placeholder='Motivo (obligatorio): p. ej. se le olvidó fichar la salida, confirmado por el encargado'></textarea>" +
+    "<div class='muted' style='margin-top:6px;'>Queda marcado como corrección, con quién la hace y cuándo.</div>" +
+    "<div style='display:flex;gap:8px;margin-top:12px;justify-content:flex-end;'><button class='bt' onclick='cerrarModal()'>Cancelar</button><button class='bt pri' onclick='confNuevo(" + js(uid) + ")'>Guardar</button></div>");
+};
+// Hora de Madrid (fecha + hh:mm) → instante real
+function madridAInstante(d, h) {
+  const [y, m, dd] = d.split("-").map(Number), [hh, mm] = h.split(":").map(Number);
+  let t = Date.UTC(y, m - 1, dd, hh, mm);
+  for (let i = 0; i < 2; i++) { const p = new Date(t).toLocaleString("sv-SE", { timeZone: TZ }).replace(" ", "T"); t -= Date.parse(p + "Z") - Date.UTC(y, m - 1, dd, hh, mm); }
+  return t;
+}
+window._madridAInstante = madridAInstante;
+window.confNuevo = async (uid) => {
+  const tipo = $("nfT").value, d = $("nfD").value, h = $("nfH").value, motivo = $("mot").value.trim();
+  if (!d || !h) { alert("Pon fecha y hora."); return; } if (motivo.length < 5) { alert("Escribe el motivo."); return; }
+  const t = madridAInstante(d, h); if (t > Date.now()) { alert("No se pueden añadir fichajes en el futuro."); return; }
+  try { await guardaCorreccion({ uid, accion: "anadir", fichajeTipo: tipo, hora: new Date(t).toISOString(), motivo, mes: mesUTC(new Date(t)) }); cerrarModal(); toast("Fichaje añadido como corrección"); }
+  catch (e) { alert("No se ha podido guardar: " + (e.code || e.message)); }
+};
+
+// Informe mensual para imprimir o guardar en PDF (una página por trabajador, con firmas)
+window.informe = () => {
+  const sel = S._trab || "", lista = S.T.filter((t) => !sel || t.uid === sel);
+  const cli = (S.T[0] || {});
+  $("informe").innerHTML = lista.map((t) => {
+    const E = eventos(S.L, t.uid), J = jornadas(E.val).filter((j) => j.dia.startsWith(S.mes));
+    const total = J.reduce((s, j) => s + j.trab, 0);
+    return "<div class='inf-pag'><div style='font-size:15px;font-weight:700;'>Registro de jornada · " + nomMes(S.mes) + "</div>" +
+      "<div class='inf-h'>Empresa: <b>" + esc(cli.clienteNombre || "") + "</b>" + (cli.clienteNif ? " · NIF " + esc(cli.clienteNif) : "") + "<br>Trabajador/a: <b>" + esc(t.nombre) + "</b>" + (t.dni ? " · DNI/NIE " + esc(t.dni) : "") +
+      "<br>Horario: " + esc(horarioTxt(t.horario)) + " · Art. 34.9 del Estatuto de los Trabajadores</div>" +
+      "<table class='inf-t'><tr><th>Día</th><th>Entrada</th><th>Pausas</th><th>Salida</th><th>Horas</th><th>Observaciones</th></tr>" +
+      (J.length ? J.map((j) => { const ps = []; let p0 = null; j.ev.forEach((e) => { if (e.tipo === "pausa") p0 = e.t; if (e.tipo === "reanuda" && p0) { ps.push(hhmm(p0) + "–" + hhmm(e.t)); p0 = null; } });
+        const obs = [...j.avisos, ...(j.ev.some((e) => e.corregido) ? ["Con corrección"] : []), ...(j.ev.some((e) => e.origen === "compartido") ? ["Móvil de la empresa"] : [])];
+        return "<tr><td>" + fDia(j.dia) + "</td><td>" + (j.ini ? hhmm(j.ini) : "") + "</td><td>" + ps.join(", ") + "</td><td>" + (j.fin ? hhmm(j.fin) : "") + "</td><td>" + dur(j.trab) + "</td><td>" + esc(obs.join(" · ")) + "</td></tr>"; }).join("")
+        : "<tr><td colspan='6'>Sin fichajes en el mes.</td></tr>") +
+      "<tr><th colspan='4' style='text-align:right;'>Total del mes</th><th>" + dur(total) + "</th><th></th></tr></table>" +
+      "<div style='font-size:9.5px;color:#444;'>Registro diario conservado durante cuatro años. Las correcciones constan con su motivo, autor y fecha. Generado el " + new Date().toLocaleString("es-ES", { timeZone: TZ }) + ".</div>" +
+      "<div class='inf-firma'><div>Firma de la empresa</div><div>Firma del trabajador/a</div></div></div>";
+  }).join("");
+  setTimeout(() => window.print(), 200);
+};
+window.csv = () => {
+  const sel = S._trab || "", lista = S.T.filter((t) => !sel || t.uid === sel);
+  const filas = [["Trabajador", "DNI/NIE", "Día", "Tipo", "Hora", "Origen", "Corrección", "Anulado"]];
+  lista.forEach((t) => eventos(S.L, t.uid).ev.filter((e) => diaDe(e.t).startsWith(S.mes)).forEach((e) =>
+    filas.push([t.nombre, t.dni || "", diaDe(e.t), TXT[e.tipo], hhmm(e.t), e.corregido ? "corrección" : e.origen === "compartido" ? "móvil empresa" : "su móvil", e.corregido ? (e.motivo || "") : "", e.anulado ? "sí" : ""])));
+  const txt = "﻿" + filas.map((f) => f.map((x) => '"' + String(x).replace(/"/g, '""') + '"').join(";")).join("\r\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv" })); a.download = "registro_horario_" + S.mes + ".csv"; a.click();
+};
+</script>
+</body>
+</html>
