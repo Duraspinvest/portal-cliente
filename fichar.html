@@ -115,7 +115,7 @@ const app = initializeApp({
 });
 const db = getFirestore(app), auth = getAuth(app);
 const ADMIN_UID = "hsQ7si0hINTgb1zXlDa2QPdkEFB2";
-const URL_COMPARTIDO = "https://fichajecompartido-gyc3opqqlq-ew.a.run.app";
+const URL_COMPARTIDO = "https://europe-west1-duraspinvest.cloudfunctions.net/fichajeCompartido";
 window._F = { db, auth };
 
 // ---------- utilidades ----------
@@ -174,7 +174,7 @@ function jornadas(val) {
     else if (e.tipo === "salida") { if (j._p) { j.pausa += e.t - j._p; j._p = null; } cierra(e.t); j.fin = e.t; J.push(j); j = null; }
   }
   if (j) { j.abierta = true; J.push(j); }
-  J.forEach((x) => { if (x.fin && x.fin - x.ini > 16 * 3600000) x.avisos.push("Jornada de más de 16 h"); });
+  J.forEach((x) => { if (x.ini && x.fin && x.fin - x.ini > 16 * 3600000) x.avisos.push("Jornada de más de 16 h"); });
   return J;
 }
 function previstas(h, dia) {
@@ -319,7 +319,7 @@ function tablaDias(J, h, gestion, uid) {
     const evs = j.ev.map((e) => "<span style='white-space:nowrap;'" + (gestion ? " title='" + esc(TXT[e.tipo] + (e.corregido ? " · corregido por " + (e.autor || "") + ": " + (e.motivo || "") : "") + (e.disp ? " · móvil de " + e.disp : "")) + "'" : "") + ">" +
       ({ entrada: "▶", pausa: "⏸", reanuda: "▶", salida: "■" })[e.tipo] + " " + hhmm(e.t) + (e.corregido ? "<span class='tag c'>c</span>" : "") +
       (gestion ? " <a href='#' class='noprint' style='color:#B91C1C;font-size:11px;' onclick=\"anular(" + js(uid) + "," + js(e.id) + "," + js(e.tipo) + "," + e.t + ");return false;\">✕</a>" : "") + "</span>").join(" · ");
-    const anul = gestion && S._anul ? (S._anul[uid] || []).filter((e) => diaDe(e.t) === j.dia) : [];
+    const anul = gestion && S._anul ? (S._anul[uid] || []).filter((e) => (S._anulJ[uid] || {})[e.id] === j) : [];
     const anTxt = anul.length ? "<br><span class='muted'>Anulados: </span>" + anul.map((e) => "<span class='anulado'>" + hhmm(e.t) + " " + TXT[e.tipo] + "</span>").join(", ") : "";
     return "<tr><td>" + fDia(j.dia) + "</td><td>" + evs + (j.avisos.length ? "<br>" + j.avisos.map((a) => "<span class='tag w'>" + esc(a) + "</span>").join("") : "") + (j.abierta ? "<span class='tag w'>en curso / sin salida</span>" : "") +
       anTxt + "</td><td><b>" + dur(j.trab) + "</b>" + (j.pausa ? "<div class='muted'>pausa " + dur(j.pausa) + "</div>" : "") + "</td><td>" + (prev ? dur(prev) : "–") + "</td></tr>";
@@ -413,10 +413,13 @@ function pintaRegistros() {
     "<select class='fi' onchange='S_trab(this.value)'><option value=''>Todos los trabajadores</option>" + S.T.map((t) => "<option value='" + esc(t.uid) + "'" + (t.uid === sel ? " selected" : "") + ">" + esc(t.nombre) + (t.activo === false ? " (baja)" : "") + "</option>").join("") + "</select>" +
     "<button class='bt pri' onclick='informe()'>🖨 Informe del mes (PDF)</button><button class='bt' onclick='csv()'>⬇ Excel (CSV)</button></div>" +
     "<div class='muted' style='margin-top:8px;'>Los fichajes no se pueden modificar ni borrar. Si hay un error: ✕ para anular uno (queda tachado) o «+ Añadir fichaje» si se olvidó. Siempre con motivo.</div></div>";
-  S._anul = {};
+  S._anul = {}; S._anulJ = {};
   html += lista.map((t) => {
     const E = eventos(S.L, t.uid), J = jornadas(E.val).filter((j) => j.dia.startsWith(S.mes));
     S._anul[t.uid] = E.ev.filter((e) => e.anulado);
+    S._anulJ[t.uid] = {};
+    S._anul[t.uid].forEach((e) => { const delDia = J.filter((j) => j.dia === diaDe(e.t)); if (!delDia.length) return;
+      let el = delDia[0]; delDia.forEach((j) => { const ini = j.ini || j.fin; if (ini != null && ini <= e.t) el = j; }); S._anulJ[t.uid][e.id] = el; });
     const total = J.reduce((s, j) => s + j.trab, 0), prev = J.reduce((s, j) => s + previstas(t.horario, j.dia), 0);
     const anuladosMes = E.ev.filter((e) => e.anulado && diaDe(e.t).startsWith(S.mes));
     const corrMes = E.corr.filter((c) => (c.hora ? diaDe(Date.parse(c.hora)) : "").startsWith(S.mes) || (c.accion === "anular" && anuladosMes.some((a) => a.id === c.refId)));
