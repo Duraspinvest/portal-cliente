@@ -95,6 +95,23 @@ main{padding:16px;max-width:600px;margin:0 auto;}
 
 @media(max-width:400px){.btn-row{grid-template-columns:1fr;}.stats-row{grid-template-columns:1fr 1fr;}}
 </style>
+<style>
+.tabs{display:flex;background:var(--navy-mid);position:sticky;top:54px;z-index:90;}
+.tab{flex:1;padding:11px 6px;border:none;background:none;color:var(--gray-400);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;}
+.tab.sel{color:white;border-bottom-color:var(--gold);}
+.tab .dot{display:none;background:#EF4444;color:white;border-radius:10px;font-size:10px;padding:1px 6px;margin-left:4px;font-weight:700;}
+.msgs{display:flex;flex-direction:column;gap:8px;min-height:200px;max-height:58vh;overflow:auto;padding:4px 2px 8px;}
+.b{max-width:82%;padding:9px 12px;border-radius:12px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;}
+.b.yo{align-self:flex-end;background:var(--navy);color:white;border-bottom-right-radius:4px;}
+.b.ase{align-self:flex-start;background:white;border:1px solid var(--gray-200);border-bottom-left-radius:4px;}
+.b .meta{font-size:10px;opacity:.7;margin-top:4px;}
+.adj{display:inline-flex;align-items:center;gap:4px;margin:5px 5px 0 0;padding:5px 9px;border-radius:7px;font-size:12px;cursor:pointer;background:rgba(255,255,255,.15);border:1px solid rgba(0,0,0,.08);color:inherit;font-family:inherit;}
+.b.ase .adj{background:var(--gray-50);}
+.composer textarea{width:100%;min-height:70px;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:15px;font-family:inherit;resize:vertical;outline:none;}
+.composer textarea:focus{border-color:var(--accent);}
+.doc-grupo{font-size:12px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;}
+.aviso-portal{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;padding:11px 13px;font-size:13px;line-height:1.5;margin-bottom:12px;}
+</style>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -138,8 +155,13 @@ main{padding:16px;max-width:600px;margin:0 auto;}
     <button onclick="doLogout()" style="background:rgba(255,255,255,0.1);color:var(--gray-400);border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">Salir</button>
   </div>
 </header>
+<div class="tabs">
+  <button class="tab sel" id="tb_facturas" onclick="verTab('facturas')">🧾 Facturas</button>
+  <button class="tab" id="tb_mensajes" onclick="verTab('mensajes')">💬 Mensajes<span class="dot" id="dotMsg"></span></button>
+  <button class="tab" id="tb_documentos" onclick="verTab('documentos')">📁 Documentos</button>
+</div>
 
-<main>
+<main id="tab_facturas">
   <!-- STATS -->
   <div class="stats-row">
     <div class="stat"><div class="stat-num" id="stTotal">0</div><div class="stat-label">Enviadas</div></div>
@@ -194,6 +216,8 @@ main{padding:16px;max-width:600px;margin:0 auto;}
     </div>
   </div>
 </main>
+<main id="tab_mensajes" style="display:none;"></main>
+<main id="tab_documentos" style="display:none;"></main>
 </div>
 
 <!-- TOAST -->
@@ -210,7 +234,7 @@ main{padding:16px;max-width:600px;margin:0 auto;}
     apiKey: "AIzaSyCVK3yF15Udps1l046kv6M1TASIwVEPcVs",
     authDomain: "duraspinvest.firebaseapp.com",
     projectId: "duraspinvest",
-    storageBucket: "duraspinvest.firebasestorage.app",
+    storageBucket: "duraspinvest-docs-eu",
     messagingSenderId: "280764832749",
     appId: "1:280764832749:web:a1fa6c44cf59518541a5e4"
   });
@@ -476,7 +500,19 @@ async function procesarArchivos(input) {
     } else {
       // Imagen: guardar archivo original + generar thumbnail pequeño para preview
       const thumb = await comprimirImagen(file, 120, 0.6);
-      window.colaArchivos.push({ nombre: file.name, tipo: file.type, tamano: file.size, fileOriginal: file, thumbnail: thumb.dataUrl, descripcion: '' });
+      // Fotos del móvil (4-6 MB): se reducen a 2400 px y calidad 85 % antes de subir (~0,5-1 MB, se siguen leyendo bien)
+      let subir = file, nombre = file.name, tipo = file.type;
+      if(/^image\/(jpeg|png|webp)$/.test(file.type) && file.size > 1200000) {
+        try {
+          const r = await comprimirImagen(file, 2400, 0.85);
+          if(r.blob && r.blob.size > 20000 && r.blob.size < file.size) {
+            nombre = file.name.replace(/\.(jpe?g|png|webp)$/i, '') + '.jpg';
+            subir = new File([r.blob], nombre, { type: 'image/jpeg' });
+            tipo = 'image/jpeg';
+          }
+        } catch(e) { console.warn('No se pudo reducir la foto, se sube la original', e); }
+      }
+      window.colaArchivos.push({ nombre, tipo, tamano: subir.size, fileOriginal: subir, thumbnail: thumb.dataUrl, descripcion: '' });
     }
   }
   renderCola();
@@ -574,5 +610,190 @@ function generarThumbnail(base64, tipo) {
 }
 </script>
 <script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+<script type="module">
+// ===== PORTAL DEL CLIENTE · mensajes con el asesor y documentos del despacho =====
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, updateDoc, getDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getBlob } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+const app = getApp(), db = getFirestore(app), auth = getAuth(app), st = getStorage(app);
+const CATS = { impuestos: "Impuestos", nominas: "Nóminas y seguros sociales", contratos: "Contratos", otros: "Otros" };
+const S = { yo: null, msgs: [], docs: [], pc: {}, cola: [], audio: null, tab: "facturas" };
+window._PS = S;
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const js = (v) => esc(JSON.stringify(String(v == null ? "" : v)));   // texto seguro dentro de onclick="…"
+const fFecha = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) + " " + d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }); };
+const fBytes = (b) => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(1).replace(".", ",") + " MB";
+const limpio = (n) => String(n).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9._-]+/g, "_").slice(-80);
+const toast = (t) => (typeof showToast === "function" ? showToast(t) : alert(t));
+
+// ---------- Pestañas ----------
+window.verTab = function (t) {
+  S.tab = t;
+  ["facturas", "mensajes", "documentos"].forEach((k) => {
+    const m = document.getElementById("tab_" + k); if (m) m.style.display = k === t ? "block" : "none";
+    const b = document.getElementById("tb_" + k); if (b) b.classList.toggle("sel", k === t);
+  });
+  if (t === "mensajes") { pintaMensajes(); marcarLeidos(); }
+  if (t === "documentos") pintaDocs();
+  window.scrollTo(0, 0);
+};
+
+let subs = [];
+onAuthStateChanged(auth, async (u) => {
+  subs.forEach((f) => f()); subs = []; S.yo = null; S.msgs = []; S.docs = [];
+  if (!u) return;
+  try { const d = await getDoc(doc(db, "portal_usuarios", u.uid)); S.yo = d.exists() ? d.data() : null; } catch (e) { S.yo = null; }
+  if (S.yo && S.yo.clienteNombre) { const b = document.getElementById("clienteBadge"); if (b) b.textContent = S.yo.clienteNombre; }
+  if (!S.yo || S.yo.activo === false) { pintaMensajes(); pintaDocs(); return; }
+  const cid = S.yo.clienteId, per = S.yo.permisos || {};
+  if (per.mensajes !== false) subs.push(onSnapshot(query(collection(db, "portal_mensajes"), where("clienteId", "==", cid)), (s) => {
+    S.msgs = s.docs.map((d) => ({ ...d.data(), id: d.id })).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+    badge(); if (S.tab === "mensajes") { pintaMensajes(); marcarLeidos(); }
+  }, (e) => console.warn("mensajes", e.message)));
+  subs.push(onSnapshot(doc(db, "portal_clientes", cid), (d) => { S.pc = d.data() || {}; pintaDocs(); escuchaDocs(); }, () => {}));
+});
+let subDocs = null;
+function escuchaDocs() {
+  if (subDocs) { subDocs(); subDocs = null; }
+  const cid = S.yo.clienteId, per = S.yo.permisos || {};
+  if (per.documentos === false || !S.pc.contratoFirmado) { S.docs = []; pintaDocs(); return; }
+  const cond = [where("clienteId", "==", cid)]; if (!per.privados) cond.push(where("privado", "==", false));
+  subDocs = onSnapshot(query(collection(db, "portal_entregas"), ...cond), (s) => {
+    S.docs = s.docs.map((d) => ({ ...d.data(), id: d.id })); pintaDocs(); badge();
+  }, (e) => { console.warn("documentos", e.message); S.docs = []; pintaDocs(); });
+  subs.push(() => subDocs && subDocs());
+}
+function noLeidos() { return S.msgs.filter((m) => m.de === "despacho" && !m.leidoCliente).length; }
+function badge() {
+  const n = noLeidos(), b = document.getElementById("dotMsg"); if (b) { b.textContent = n; b.style.display = n ? "inline" : "none"; }
+}
+function marcarLeidos() { S.msgs.filter((m) => m.de === "despacho" && !m.leidoCliente).forEach((m) => updateDoc(doc(db, "portal_mensajes", m.id), { leidoCliente: true }).catch(() => {})); }
+
+// ---------- Mensajes ----------
+function sinAcceso(box, que) {
+  box.innerHTML = "<div class='card'><div class='aviso-portal'>" + (S.yo && S.yo.activo === false ? "Tu usuario está desactivado. Contacta con tu asesor por teléfono." :
+    "Tu asesor todavía está activando " + que + " para tu cuenta. Mientras tanto puedes seguir enviando tus facturas.") + "</div></div>";
+}
+function pintaMensajes() {
+  const box = document.getElementById("tab_mensajes"); if (!box) return;
+  if (!S.yo || S.yo.activo === false) return sinAcceso(box, "los mensajes");
+  if ((S.yo.permisos || {}).mensajes === false) { box.innerHTML = "<div class='card'><div class='aviso-portal'>Tu usuario no tiene acceso a los mensajes.</div></div>"; return; }
+  const borr = (document.getElementById("pmTexto") || {}).value || "";
+  box.innerHTML = "<div class='card'><div style='font-size:14px;font-weight:600;color:var(--navy);margin-bottom:2px;'>Mensajes con tu asesor</div>" +
+    "<div style='font-size:12px;color:var(--gray-400);margin-bottom:12px;'>Escribe tus consultas, adjunta documentos o graba una nota de voz. Para urgencias, llama por teléfono.</div>" +
+    "<div class='msgs' id='pmLista'>" + (S.msgs.length ? S.msgs.map((m) => "<div class='b " + (m.de === "cliente" ? "yo" : "ase") + "'>" + esc(m.texto || "") +
+      "<div>" + (m.adjuntos || []).filter((a) => String(a.path || "").startsWith("mensajes/" + S.yo.clienteId + "/")).map((a) => "<button class='adj' onclick=\"abrirAdj(" + js(a.path) + "," + js(a.nombre) + "," + js(a.tipo || "") + ")\">" + (/^image\//.test(a.tipo) ? "🖼" : /pdf/.test(a.tipo) ? "📄" : "📎") + " " + esc(a.nombre) + "</button>").join("") + "</div>" +
+      (m.audio && String(m.audio.path || "").startsWith("mensajes/" + S.yo.clienteId + "/") ? "<div><button class='adj' onclick=\"oirAudio(this," + js(m.audio.path) + ")\">▶ Nota de voz" + (m.audio.seg ? " · " + Math.round(m.audio.seg) + " s" : "") + "</button></div>" : "") +
+      "<div class='meta'>" + (m.de === "cliente" ? esc(m.autorNombre || "") + " · " : "Durespin · ") + fFecha(m.fecha) + "</div></div>").join("") :
+      "<div class='empty'><div class='empty-icon'>💬</div><div>Aún no hay mensajes. Escribe tu primera consulta.</div></div>") + "</div>" +
+    "<div class='composer' style='margin-top:12px;'><textarea id='pmTexto' placeholder='Escribe tu mensaje…'></textarea>" +
+    "<div id='pmCola' style='font-size:12px;color:var(--gray-600);margin:6px 0;'></div>" +
+    "<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;'><button class='btn btn-camera' onclick=\"document.getElementById('pmFile').click()\">📎 Adjuntar</button>" +
+    "<button class='btn btn-pdf' id='pmRec' onclick='grabar()'>🎤 Nota de voz</button></div><div id='pmRecT' style='text-align:center;font-size:12px;color:#B91C1C;margin-top:4px;'></div>" +
+    "<button class='btn btn-primary' id='pmEnviar' style='width:100%;margin-top:8px;' onclick='enviarMsg()'>Enviar</button>" +
+    "<input type='file' id='pmFile' multiple accept='image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt' style='display:none' onchange='addCola(this)'></div></div>";
+  if (borr) document.getElementById("pmTexto").value = borr;
+  pintaCola();
+  const l = document.getElementById("pmLista"); if (l) l.scrollTop = l.scrollHeight;
+}
+function pintaCola() {
+  const el = document.getElementById("pmCola"); if (!el) return;
+  el.innerHTML = S.cola.map((f, i) => "📎 " + esc(f.name) + " (" + fBytes(f.size) + ") <a href='#' onclick='quitarCola(" + i + ");return false;'>quitar</a>").join("<br>") +
+    (S.audio ? (S.cola.length ? "<br>" : "") + "🎤 Nota de voz (" + Math.round(S.audio.seg) + " s) <a href='#' onclick='quitarAudio();return false;'>quitar</a>" : "");
+}
+window.quitarCola = (i) => { S.cola.splice(i, 1); pintaCola(); };
+window.quitarAudio = () => { S.audio = null; pintaCola(); };
+window.addCola = async (inp) => {
+  for (const f of inp.files) {
+    let x = f;
+    if (/^image\/(jpeg|png|webp)$/.test(f.type) && f.size > 1200000 && typeof comprimirImagen === "function") {
+      try { const r = await comprimirImagen(f, 2400, 0.85); if (r.blob && r.blob.size < f.size) x = new File([r.blob], f.name.replace(/\.(jpe?g|png|webp)$/i, "") + ".jpg", { type: "image/jpeg" }); } catch (e) {}
+    }
+    if (x.size > 25 * 1048576) { alert(f.name + ": el máximo es 25 MB."); continue; }
+    S.cola.push(x);
+  }
+  inp.value = ""; pintaCola();
+};
+let rec = null, t0 = 0, tm = null;
+window.grabar = async function () {
+  const btn = document.getElementById("pmRec");
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { alert("Este móvil o navegador no permite grabar audio. Escribe el mensaje, por favor."); return; }
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { alert("Necesitas dar permiso al micrófono para grabar."); return; }
+  const tipo = ["audio/mp4", "audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+  const tr = []; rec = new MediaRecorder(stream, tipo ? { mimeType: tipo } : undefined);
+  rec.ondataavailable = (e) => e.data.size && tr.push(e.data);
+  rec.onstop = () => { stream.getTracks().forEach((t) => t.stop()); clearInterval(tm); const tp = (rec.mimeType || tipo || "audio/webm").split(";")[0];
+    S.audio = { blob: new Blob(tr, { type: tp }), seg: (Date.now() - t0) / 1000, tipo: tp };
+    if (btn) btn.innerHTML = "🎤 Nota de voz"; const x = document.getElementById("pmRecT"); if (x) x.textContent = ""; pintaCola(); };
+  rec.start(); t0 = Date.now(); if (btn) btn.innerHTML = "⏹ Parar y adjuntar";
+  tm = setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); const x = document.getElementById("pmRecT"); if (x) x.textContent = "● Grabando " + s + " s (máx. 3 min)"; if (s >= 180) rec.stop(); }, 500);
+};
+const ext = (t) => ({ "audio/webm": "webm", "audio/mp4": "m4a", "audio/ogg": "ogg" })[t] || "audio";
+window.enviarMsg = async function () {
+  const txt = (document.getElementById("pmTexto").value || "").trim();
+  if (!txt && !S.cola.length && !S.audio) return;
+  const cid = S.yo.clienteId, u = auth.currentUser, btn = document.getElementById("pmEnviar");
+  btn.disabled = true; btn.textContent = "Enviando…";
+  try {
+    const ts = Date.now(), adj = [];
+    for (const [i, f] of S.cola.entries()) {
+      const path = "mensajes/" + cid + "/" + ts + "_" + i + "_" + limpio(f.name);
+      await uploadBytes(ref(st, path), f, { contentType: f.type || "application/octet-stream" });
+      adj.push({ nombre: f.name, path, tipo: f.type || "", tamano: f.size });
+    }
+    let audio = null;
+    if (S.audio) { const path = "mensajes/" + cid + "/" + ts + "_voz." + ext(S.audio.tipo); await uploadBytes(ref(st, path), S.audio.blob, { contentType: S.audio.tipo }); audio = { path, tipo: S.audio.tipo, seg: S.audio.seg }; }
+    await addDoc(collection(db, "portal_mensajes"), { clienteId: cid, clienteNombre: S.yo.clienteNombre || "", de: "cliente", autorUid: u.uid, autorNombre: S.yo.nombre || "",
+      texto: txt, adjuntos: adj, audio, fecha: new Date().toISOString(), leidoDespacho: false, leidoCliente: true });
+    S.cola = []; S.audio = null; document.getElementById("pmTexto").value = ""; toast("Mensaje enviado");
+  } catch (e) { console.error(e); alert("No se ha podido enviar: " + e.message); }
+  const b = document.getElementById("pmEnviar"); if (b) { b.disabled = false; b.textContent = "Enviar"; }
+};
+const SEGUROS = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
+window.abrirAdj = async (path, nombre, tipo) => {
+  try { const b0 = await getBlob(ref(st, path)); const t = SEGUROS.includes(b0.type) ? b0.type : "application/octet-stream"; const url = URL.createObjectURL(new Blob([b0], { type: t }));
+    if (t !== "application/octet-stream") window.open(url, "_blank"); else { const a = document.createElement("a"); a.href = url; a.download = nombre || "archivo"; a.click(); }
+    setTimeout(() => URL.revokeObjectURL(url), 60000); } catch (e) { alert("No se ha podido abrir: " + e.message); }
+};
+window.oirAudio = async (btn, path) => {
+  try { const b = await getBlob(ref(st, path)); const a = document.createElement("audio"); a.controls = true; a.autoplay = true; a.src = URL.createObjectURL(b); a.style.cssText = "max-width:230px;height:34px;"; btn.replaceWith(a); }
+  catch (e) { alert("No se ha podido reproducir: " + e.message); }
+};
+
+// ---------- Documentos del despacho ----------
+function pintaDocs() {
+  const box = document.getElementById("tab_documentos"); if (!box) return;
+  if (!S.yo || S.yo.activo === false) return sinAcceso(box, "los documentos");
+  if ((S.yo.permisos || {}).documentos === false) { box.innerHTML = "<div class='card'><div class='aviso-portal'>Tu usuario no tiene acceso a los documentos.</div></div>"; return; }
+  if (!S.pc.contratoFirmado) { box.innerHTML = "<div class='card'><div class='aviso-portal'>Tus documentos (impuestos, nóminas, contratos…) estarán disponibles aquí en cuanto esté firmado el contrato de servicios con Durespin.</div></div>"; return; }
+  const D = S.docs.slice().sort((a, b) => String(b.anio).localeCompare(String(a.anio)) || String(b.subido).localeCompare(String(a.subido)));
+  let h = "<div class='card'><div style='font-size:14px;font-weight:600;color:var(--navy);margin-bottom:2px;'>Documentos de tu asesor</div>" +
+    "<div style='font-size:12px;color:var(--gray-400);margin-bottom:6px;'>Descárgalos y guárdalos: aquí los tendrás siempre disponibles. Los marcados con 🔒 se abren con tu clave de documentos.</div>";
+  if (!D.length) h += "<div class='empty'><div class='empty-icon'>📁</div><div>Todavía no hay documentos.</div></div>";
+  let grupo = "";
+  D.forEach((d) => {
+    const g = d.anio + " · " + (CATS[d.categoria] || d.categoria);
+    if (g !== grupo) { h += "<div class='doc-grupo'>" + esc(g) + "</div>"; grupo = g; }
+    h += "<div class='doc-item'><div class='doc-thumb'>" + (d.cifrado ? "🔒" : "📄") + "</div><div class='doc-info'><div class='doc-nombre'>" + esc(d.nombre) + "</div>" +
+      "<div class='doc-meta'>" + fFecha(d.subido) + " · " + fBytes(d.tamano || 0) + "</div></div>" +
+      "<button class='btn btn-sm btn-primary' onclick=\"descargar(" + js(d.id) + ")\">⬇ Descargar</button></div>";
+  });
+  box.innerHTML = h + "</div>";
+}
+window.descargar = async (id) => {
+  const d = S.docs.find((x) => x.id === id); if (!d) return;
+  try {
+    const b = await getBlob(ref(st, d.path)); const url = URL.createObjectURL(b);
+    const a = document.createElement("a"); a.href = url; a.download = d.nombre || "documento.pdf"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    const u = auth.currentUser;
+    addDoc(collection(db, "portal_entregas", id, "descargas"), { uid: u.uid, nombre: S.yo.nombre || "", fecha: new Date().toISOString() }).catch(() => {});
+    if (d.cifrado) toast("Para abrirlo, usa tu clave de documentos");
+  } catch (e) { alert("No se ha podido descargar: " + e.message); }
+};
+</script>
 </body>
 </html>
